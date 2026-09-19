@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>FoodHub | Smart Food Ordering</title>
+
+    <link rel="stylesheet"
+          th:href="@{/css/style.css}">
+
+</head>
+
+
+<body>
+
+
+<!-- ================= NAVBAR ================= -->
+
+<nav class="navbar">
+
+    <div class="logo">
+        🍴 FoodHub
+    </div>
+
+
+    <ul class="nav-links">
+
+        <li>
+            <a href="/">
+                Home
+            </a>
+        </li>
+
+        <li>
+            <a href="/restaurants">
+                Restaurants
+            </a>
+        </li>
+
+        <li>
+            <a href="/#features">
+                Features
+            </a>
+        </li>
+
+
+        <!-- ================= LOGIN ================= -->
+
+        <!-- Show Login when nobody is logged in -->
+        <li th:if="${session.loggedInCustomer == null}">
+
+            <a href="/login">
+                🔐 Login
+            </a>
+
+        </li>
+
+
+        <!-- ================= LOGGED-IN CUSTOMER ================= -->
+
+        <!-- Show customer information after login -->
+        <li th:if="${session.loggedInCustomer != null}">
+
+            <a href="/restaurants"
+               style="font-weight:600;">
+
+                👤
+                <span th:text="${session.loggedInCustomer.name}">
+                    Customer
+                </span>
+
+                <span>
+                    (
+                    <span th:text="${session.loggedInCustomer.loyaltyTier}">
+                        REGULAR
+                    </span>
+                    )
+                </span>
+
+            </a>
+
+        </li>
+
+
+        <!-- ================= LOGOUT ================= -->
+
+        <li th:if="${session.loggedInCustomer != null}">
+
+            <a href="/logout"
+               style="color:#ff5a3c;">
+
+                Logout
+
+            </a>
+
+        </li>
+
+
+        <!-- ================= CART ================= -->
+
+        <li>
+
+            <a href="/cart">
+                🛒 Cart
+            </a>
+
+        </li>
+
+    </ul>
+
+</nav>
+
+
+<!-- ================= HERO ================= -->
+
+<section class="hero">
+
+
+    <div class="hero-content">
+
+
+        <div class="hero-tag">
+
+            ⚡ Smart Dynamic Pricing
+
+        </div>
+
+
+        <h1>
+
+            Delicious food.
+
+            <br>
+
+            <span>
+                Smart prices.
+            </span>
+
+        </h1>
+
+
+        <p>
+
+            Discover your favourite restaurants,
+            enjoy delicious meals and get intelligent
+            prices, exclusive discounts and fast delivery.
+
+        </p>
+
+
+        <a href="/restaurants"
+           class="hero-button">
+
+            Explore Restaurants →
+
+        </a>
+
+
+    </div>
+
+
+    <div class="hero-food">
+
+        🍔
+
+    </div>
+
+
+</section>
+
+
+<!-- ================= RESTAURANT SECTION ================= -->
+
+<section class="menu-section">
+
+
+    <div class="section-header">
+
+
+        <h2>
+
+            Find Your Restaurant
+
+        </h2>
+
+
+        <p>
+
+            Choose from multiple restaurants
+            and explore their menus.
+
+        </p>
+
+
+    </div>
+
+
+    <div class="menu-grid">
+
+
+        <!-- SPICE GARDEN -->
+
+        <div class="food-card">
+
+
+            <div class="food-image">
+
+                🍛
+
+            </div>
+
+
+            <div class="food-info">
+
+
+                <span class="category">
+
+                    Indian Cuisine
+
+                </span>
+
+
+                <h3>
+
+                    Spice Garden
+
+                </h3>
+
+
+                <p class="description">
+
+                    Delicious Indian meals,
+                    biryanis and vegetarian dishes.
+
+                </p>
+
+
+                <div class="food-bottom">
+
+
+                    <span class="price">
+
+                        📍 Vellore
+
+                    </span>
+
+
+                    <a href="/restaurant/1"
+                       class="add-btn">
+
+                        View Menu
+
+                    </a>
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+        <!-- PIZZA PALACE -->
+
+        <div class="food-card">
+
+
+            <div class="food-image">
+
+                🍕
+
+            </div>
+
+
+            <div class="food-info">
+
+
+                <span class="category">
+
+                    Italian & Pizza
+
+                </span>
+
+
+                <h3>
+
+                    Pizza Palace
+
+                </h3>
+
+
+                <p class="description">
+
+                    Fresh pizzas, sides and
+                    delicious Italian favourites.
+
+                </p>
+
+
+                <div class="food-bottom">
+
+
+                    <span class="price">
+
+                        📍 Katpadi
+
+                    </span>
+
+
+                    <a href="/restaurant/2"
+                       class="add-btn">
+
+                        View Menu
+
+                    </a>
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+        <!-- BURGER HUB -->
+
+        <div class="food-card">
+
+
+            <div class="food-image">
+
+                🍔
+
+            </div>
+
+
+            <div class="food-info">
+
+
+                <span class="category">
+
+                    Fast Food
+
+                </span>
+
+
+                <h3>
+
+                    Burger Hub
+
+                </h3>
+
+
+                <p class="description">
+
+                    Burgers, fries and tasty
+                    desserts for every craving.
+
+                </p>
+
+
+                <div class="food-bottom">
+
+
+                    <span class="price">
+
+                        📍 Vellore
+
+                    </span>
+
+
+                    <a href="/restaurant/3"
+                       class="add-btn">
+
+                        View Menu
+
+                    </a>
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+    <!-- VIEW ALL -->
+
+    <div style="
+        text-align:center;
+        margin-top:40px;
+    ">
+
+
+        <a href="/restaurants"
+           class="hero-button">
+
+            View All Restaurants →
+
+        </a>
+
+
+    </div>
+
+
+</section>
+
+
+<!-- ================= FEATURES ================= -->
+
+<section class="features"
+         id="features">
+
+
+    <div class="feature">
+
+
+        <div class="feature-icon">
+
+            ⚡
+
+        </div>
+
+
+        <h3>
+
+            Dynamic Pricing
+
+        </h3>
+
+
+        <p>
+
+            Prices can adapt according to
+            time, weekend conditions and demand.
+
+        </p>
+
+
+    </div>
+
+
+    <div class="feature">
+
+
+        <div class="feature-icon">
+
+            🏷️
+
+        </div>
+
+
+        <h3>
+
+            Smart Discounts
+
+        </h3>
+
+
+        <p>
+
+            Loyalty, bulk-order and coupon
+            discounts can reduce your final bill.
+
+        </p>
+
+
+    </div>
+
+
+    <div class="feature">
+
+
+        <div class="feature-icon">
+
+            🚴
+
+        </div>
+
+
+        <h3>
+
+            Fast Delivery
+
+        </h3>
+
+
+        <p>
+
+            Delivery charges are calculated
+            according to customer distance.
+
+        </p>
+
+
+    </div>
+
+
+</section>
+
+
+<!-- ================= HOW IT WORKS ================= -->
+
+<section class="menu-section">
+
+
+    <div class="section-header">
+
+
+        <h2>
+
+            How FoodHub Works
+
+        </h2>
+
+
+        <p>
+
+            Ordering your favourite food
+            is simple.
+
+        </p>
+
+
+    </div>
+
+
+    <div class="features">
+
+
+        <div class="feature">
+
+
+            <div class="feature-icon">
+
+                1️⃣
+
+            </div>
+
+
+            <h3>
+
+                Choose Restaurant
+
+            </h3>
+
+
+            <p>
+
+                Browse restaurants and
+                select your favourite.
+
+            </p>
+
+
+        </div>
+
+
+        <div class="feature">
+
+
+            <div class="feature-icon">
+
+                2️⃣
+
+            </div>
+
+
+            <h3>
+
+                Build Your Cart
+
+            </h3>
+
+
+            <p>
+
+                Select food items and
+                adjust quantities.
+
+            </p>
+
+
+        </div>
+
+
+        <div class="feature">
+
+
+            <div class="feature-icon">
+
+                3️⃣
+
+            </div>
+
+
+            <h3>
+
+                Enjoy Smart Pricing
+
+            </h3>
+
+
+            <p>
+
+                Dynamic pricing, discounts
+                and delivery charges are calculated.
+
+            </p>
+
+
+        </div>
+
+
+    </div>
+
+
+</section>
+
+
+<!-- ================= FOOTER ================= -->
+
+<footer>
+
+
+    <h3>
+
+        🍴 FoodHub
+
+    </h3>
+
+
+    <p>
+
+        Online Food Ordering System
+        with Dynamic Pricing
+
+    </p>
+
+
+    <p>
+
+        Software Metrics Project
+
+    </p>
+
+
+</footer>
+
+
+</body>
+
+</html>

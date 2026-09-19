@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>FoodHub | Your Cart</title>
+
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+
+    <style>
+
+        .cart-page {
+            padding: 50px 7%;
+            min-height: 65vh;
+        }
+
+        .cart-container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .cart-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .cart-header h1 {
+            font-size: 42px;
+            margin-bottom: 10px;
+        }
+
+        .cart-header p {
+            color: #777;
+            font-size: 16px;
+        }
+
+        /* EMPTY CART */
+
+        .empty-cart {
+            max-width: 600px;
+            margin: 50px auto;
+            text-align: center;
+            background: white;
+            padding: 55px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        .empty-cart-icon {
+            font-size: 70px;
+            margin-bottom: 20px;
+        }
+
+        .empty-cart h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .empty-cart p {
+            color: #777;
+            margin-bottom: 25px;
+        }
+
+        /* CART LAYOUT */
+
+        .cart-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        /* ITEMS */
+
+        .cart-items {
+            background: white;
+            border-radius: 18px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        .cart-items-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .cart-items-header h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .item-count {
+            color: #777;
+            font-size: 14px;
+        }
+
+        .cart-item {
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            gap: 20px;
+            align-items: center;
+
+            padding: 20px 0;
+
+            border-bottom: 1px solid #eee;
+        }
+
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .cart-item-image {
+            width: 80px;
+            height: 80px;
+
+            border-radius: 15px;
+
+            background: #fff4ec;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 38px;
+        }
+
+        .cart-item-details h3 {
+            margin: 0 0 7px;
+            font-size: 18px;
+        }
+
+        .cart-item-category {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 7px;
+        }
+
+        .cart-item-price {
+            font-size: 14px;
+            color: #777;
+        }
+
+        .cart-item-total {
+            font-size: 18px;
+            font-weight: 700;
+            text-align: right;
+        }
+
+        /* ================================
+           QUANTITY CONTROLS
+           ================================ */
+
+        .quantity-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            margin-top: 12px;
+        }
+
+        .quantity-label {
+            font-size: 13px;
+            color: #777;
+
+            margin-right: 5px;
+        }
+
+        .quantity-form {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quantity-button {
+            width: 30px;
+            height: 30px;
+
+            border: none;
+            border-radius: 8px;
+
+            background: #f1f1f1;
+
+            font-size: 18px;
+            font-weight: 700;
+
+            cursor: pointer;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            transition: 0.2s ease;
+        }
+
+        .quantity-button:hover {
+            background: #ff6b35;
+            color: white;
+        }
+
+        .quantity-value {
+            min-width: 30px;
+
+            text-align: center;
+
+            background: #f7f7f7;
+
+            padding: 6px 8px;
+
+            border-radius: 8px;
+
+            font-weight: 700;
+        }
+
+        /* REMOVE BUTTON */
+
+        .remove-button {
+            margin-top: 8px;
+
+            border: none;
+            background: transparent;
+
+            color: #d63d27;
+
+            font-size: 12px;
+
+            cursor: pointer;
+
+            padding: 0;
+        }
+
+        .remove-button:hover {
+            text-decoration: underline;
+        }
+
+        /* SUMMARY */
+
+        .cart-summary {
+            background: white;
+            border-radius: 18px;
+
+            padding: 28px;
+
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+
+            position: sticky;
+            top: 20px;
+        }
+
+        .cart-summary h2 {
+            margin-top: 0;
+            margin-bottom: 25px;
+
+            font-size: 24px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            margin-bottom: 15px;
+
+            color: #555;
+        }
+
+        .summary-row strong {
+            color: #222;
+        }
+
+        .summary-divider {
+            border: none;
+            border-top: 1px solid #eee;
+
+            margin: 20px 0;
+        }
+
+        .summary-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            font-size: 23px;
+            font-weight: 800;
+
+            margin-bottom: 25px;
+        }
+
+        /* CHECKOUT */
+
+        .checkout-button {
+            display: block;
+
+            width: 100%;
+
+            text-align: center;
+            text-decoration: none;
+
+            box-sizing: border-box;
+
+            padding: 15px 20px;
+
+            border-radius: 12px;
+
+            background: #ff6b35;
+            color: white;
+
+            font-weight: 700;
+            font-size: 16px;
+
+            transition: 0.25s ease;
+        }
+
+        .checkout-button:hover {
+            transform: translateY(-2px);
+            opacity: 0.92;
+        }
+
+        /* ACTIONS */
+
+        .cart-actions {
+            max-width: 1100px;
+
+            margin: 30px auto 0;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            gap: 15px;
+
+            flex-wrap: wrap;
+        }
+
+        .secondary-button {
+            display: inline-block;
+
+            text-decoration: none;
+
+            padding: 13px 22px;
+
+            border-radius: 10px;
+
+            background: #f3f3f3;
+
+            color: #333;
+
+            font-weight: 600;
+
+            border: none;
+
+            cursor: pointer;
+
+            transition: 0.25s ease;
+        }
+
+        .secondary-button:hover {
+            background: #e8e8e8;
+        }
+
+        .danger-button {
+            padding: 13px 22px;
+
+            border-radius: 10px;
+
+            background: #fff0ed;
+
+            color: #d63d27;
+
+            font-weight: 600;
+
+            border: none;
+
+            cursor: pointer;
+
+            transition: 0.25s ease;
+        }
+
+        .danger-button:hover {
+            background: #ffe1dc;
+        }
+
+        /* INFO */
+
+        .cart-info {
+            margin-top: 20px;
+
+            padding: 15px;
+
+            border-radius: 12px;
+
+            background: #fff8ef;
+
+            color: #765;
+
+            font-size: 13px;
+
+            line-height: 1.5;
+        }
+
+        /* RESPONSIVE */
+
+        @media (max-width: 850px) {
+
+            .cart-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .cart-summary {
+                position: static;
+            }
+        }
+
+        @media (max-width: 600px) {
+
+            .cart-page {
+                padding: 35px 5%;
+            }
+
+            .cart-header h1 {
+                font-size: 32px;
+            }
+
+            .cart-item {
+                grid-template-columns: 60px 1fr;
+            }
+
+            .cart-item-image {
+                width: 60px;
+                height: 60px;
+
+                font-size: 30px;
+            }
+
+            .cart-item-total {
+                grid-column: 2;
+
+                text-align: left;
+            }
+
+            .cart-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .secondary-button,
+            .danger-button {
+                text-align: center;
+
+                width: 100%;
+
+                box-sizing: border-box;
+            }
+        }
+
+    </style>
+</head>
+
+
+<body>
+
+<!-- =========================================================
+     NAVBAR
+     ========================================================= -->
+
+<nav class="navbar">
+
+    <div class="logo">
+        🍴 FoodHub
+    </div>
+
+    <ul class="nav-links">
+
+        <li>
+            <a href="/">Home</a>
+        </li>
+
+        <li>
+            <a href="/restaurants">Restaurants</a>
+        </li>
+
+        <li>
+            <a href="/#features">Features</a>
+        </li>
+
+        <li>
+            <a href="/cart" class="cart-btn">
+                🛒 Cart
+            </a>
+        </li>
+
+    </ul>
+
+</nav>
+
+
+<!-- =========================================================
+     CART PAGE
+     ========================================================= -->
+
+<section class="cart-page">
+
+    <div class="cart-container">
+
+
+        <!-- HEADER -->
+
+        <div class="cart-header">
+
+            <span class="category">
+                Your Order
+            </span>
+
+            <h1>
+                🛒 Shopping Cart
+            </h1>
+
+            <p>
+                Review your selected items before checkout.
+            </p>
+
+        </div>
+
+
+        <!-- =====================================================
+             EMPTY CART
+             ===================================================== -->
+
+        <div class="empty-cart"
+             th:if="${cart == null || cart.items.isEmpty()}">
+
+            <div class="empty-cart-icon">
+                🛒
+            </div>
+
+            <h2>
+                Your cart is empty
+            </h2>
+
+            <p>
+                Looks like you haven't added anything yet.
+                Explore our restaurants and find something delicious!
+            </p>
+
+            <a href="/restaurants"
+               class="hero-button">
+
+                Explore Restaurants →
+
+            </a>
+
+        </div>
+
+
+        <!-- =====================================================
+             CART WITH ITEMS
+             ===================================================== -->
+
+        <div class="cart-layout"
+             th:if="${cart != null && !cart.items.isEmpty()}">
+
+
+            <!-- =================================================
+                 LEFT SIDE - ITEMS
+                 ================================================= -->
+
+            <div class="cart-items">
+
+
+                <div class="cart-items-header">
+
+                    <h2>
+                        Your Items
+                    </h2>
+
+                    <span class="item-count">
+
+                        <span th:text="${cart.totalItemCount}">
+                            0
+                        </span>
+
+                        item(s)
+
+                    </span>
+
+                </div>
+
+
+                <!-- =============================================
+                     EACH CART ITEM
+                     ============================================= -->
+
+                <div class="cart-item"
+                     th:each="item : ${cart.items}">
+
+
+                    <!-- FOOD ICON -->
+
+                    <div class="cart-item-image">
+
+                        <span th:if="${item.menuItem.category == 'Main Course'}">
+                            🍛
+                        </span>
+
+                        <span th:if="${item.menuItem.category == 'Pizza'}">
+                            🍕
+                        </span>
+
+                        <span th:if="${item.menuItem.category == 'Fast Food'}">
+                            🍔
+                        </span>
+
+                        <span th:if="${item.menuItem.category == 'Dessert'}">
+                            🍦
+                        </span>
+
+                        <span th:if="${item.menuItem.category != 'Main Course'
+                                      && item.menuItem.category != 'Pizza'
+                                      && item.menuItem.category != 'Fast Food'
+                                      && item.menuItem.category != 'Dessert'}">
+                            🍽️
+                        </span>
+
+                    </div>
+
+
+                    <!-- FOOD DETAILS -->
+
+                    <div class="cart-item-details">
+
+                        <h3 th:text="${item.menuItem.name}">
+                            Food Item
+                        </h3>
+
+
+                        <div class="cart-item-category"
+                             th:text="${item.menuItem.category}">
+                            Category
+                        </div>
+
+
+                        <div class="cart-item-price">
+
+                            Rs.
+
+                            <span th:text="${item.menuItem.basePrice}">
+                                0
+                            </span>
+
+                            per item
+
+                        </div>
+
+
+                        <!-- =====================================
+                             QUANTITY CONTROLS
+                             ===================================== -->
+
+                        <div class="quantity-box">
+
+                            <span class="quantity-label">
+                                Quantity:
+                            </span>
+
+
+                            <!-- DECREASE -->
+
+                            <form class="quantity-form"
+                                  method="post"
+                                  th:action="@{/cart/decrease/{id}(id=${item.menuItem.itemId})}">
+
+                                <button type="submit"
+                                        class="quantity-button">
+
+                                    −
+
+                                </button>
+
+                            </form>
+
+
+                            <!-- CURRENT QUANTITY -->
+
+                            <span class="quantity-value"
+                                  th:text="${item.quantity}">
+
+                                1
+
+                            </span>
+
+
+                            <!-- INCREASE -->
+
+                            <form class="quantity-form"
+                                  method="post"
+                                  th:action="@{/cart/increase/{id}(id=${item.menuItem.itemId})}">
+
+                                <button type="submit"
+                                        class="quantity-button">
+
+                                    +
+
+                                </button>
+
+                            </form>
+
+                        </div>
+
+
+                        <!-- REMOVE ITEM -->
+
+                        <form method="post"
+                              th:action="@{/cart/remove/{id}(id=${item.menuItem.itemId})}">
+
+                            <button type="submit"
+                                    class="remove-button">
+
+                                🗑 Remove item
+
+                            </button>
+
+                        </form>
+
+                    </div>
+
+
+                    <!-- ITEM TOTAL -->
+
+                    <div class="cart-item-total">
+
+                        Rs.
+
+                        <span th:text="${item.totalPrice}">
+                            0
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- SMART PRICING MESSAGE -->
+
+                <div class="cart-info">
+
+                    ⚡
+
+                    <strong>
+                        Smart Pricing:
+                    </strong>
+
+                    Final prices may change during checkout based on
+                    time, demand and other pricing rules.
+
+                    Eligible loyalty, bulk and coupon discounts
+                    will be calculated at checkout.
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 RIGHT SIDE - SUMMARY
+                 ================================================= -->
+
+            <div class="cart-summary">
+
+                <h2>
+                    Order Summary
+                </h2>
+
+
+                <!-- ITEMS -->
+
+                <div class="summary-row">
+
+                    <span>
+                        Items
+                    </span>
+
+                    <strong>
+
+                        <span th:text="${cart.totalItemCount}">
+                            0
+                        </span>
+
+                    </strong>
+
+                </div>
+
+
+                <!-- SUBTOTAL -->
+
+                <div class="summary-row">
+
+                    <span>
+                        Subtotal
+                    </span>
+
+                    <strong>
+
+                        Rs.
+
+                        <span th:text="${cart.subtotal}">
+                            0
+                        </span>
+
+                    </strong>
+
+                </div>
+
+
+                <hr class="summary-divider">
+
+
+                <!-- DYNAMIC PRICING -->
+
+                <div class="summary-row">
+
+                    <span>
+                        ⚡ Dynamic Pricing
+                    </span>
+
+                    <strong>
+                        At Checkout
+                    </strong>
+
+                </div>
+
+
+                <!-- DISCOUNTS -->
+
+                <div class="summary-row">
+
+                    <span>
+                        🏷️ Discounts
+                    </span>
+
+                    <strong>
+                        At Checkout
+                    </strong>
+
+                </div>
+
+
+                <!-- DELIVERY -->
+
+                <div class="summary-row">
+
+                    <span>
+                        🚴 Delivery
+                    </span>
+
+                    <strong>
+                        At Checkout
+                    </strong>
+
+                </div>
+
+
+                <hr class="summary-divider">
+
+
+                <!-- CART TOTAL -->
+
+                <div class="summary-total">
+
+                    <span>
+                        Cart Total
+                    </span>
+
+                    <span>
+
+                        Rs.
+
+                        <span th:text="${cart.subtotal}">
+                            0
+                        </span>
+
+                    </span>
+
+                </div>
+
+
+                <!-- CHECKOUT -->
+
+                <a href="/checkout"
+                   class="checkout-button">
+
+                    Proceed to Checkout →
+
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             BOTTOM ACTIONS
+             ===================================================== -->
+
+        <div class="cart-actions"
+             th:if="${cart != null && !cart.items.isEmpty()}">
+
+
+            <!-- CONTINUE SHOPPING -->
+
+            <a href="/restaurants"
+               class="secondary-button">
+
+                ← Continue Shopping
+
+            </a>
+
+
+            <!-- CLEAR CART -->
+
+            <form method="post"
+                  action="/cart/clear">
+
+                <button type="submit"
+                        class="danger-button">
+
+                    🗑 Clear Cart
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================================================
+     FOOTER
+     ========================================================= -->
+
+<footer>
+
+    <h3>
+        🍴 FoodHub
+    </h3>
+
+    <p>
+        Online Food Ordering System with Dynamic Pricing
+    </p>
+
+    <p>
+        Software Metrics Project
+    </p>
+
+</footer>
+
+
+</body>
+
+</html>

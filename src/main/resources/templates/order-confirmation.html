@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>FoodHub | Order Confirmed</title>
+
+    <link rel="stylesheet"
+          th:href="@{/css/style.css}">
+
+    <style>
+
+        /* =====================================================
+           PAGE
+           ===================================================== */
+
+        body {
+            background: #f7f8fc;
+        }
+
+
+        .confirmation-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+
+        /* =====================================================
+           SUCCESS HEADER
+           ===================================================== */
+
+        .success-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+
+        .success-badge {
+            display: inline-block;
+            background: #fff0eb;
+            color: #ff5a36;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+
+        .success-header h1 {
+            margin: 0;
+            font-size: 32px;
+            color: #151515;
+        }
+
+
+        .success-header p {
+            margin-top: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+
+
+        /* =====================================================
+           CARD
+           ===================================================== */
+
+        .confirmation-card {
+            background: white;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 18px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+        }
+
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 18px;
+            color: #181818;
+        }
+
+
+        /* =====================================================
+           ORDER DETAILS
+           ===================================================== */
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 22px;
+        }
+
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 11px 0;
+            border-bottom: 1px solid #eeeeee;
+            font-size: 13px;
+        }
+
+
+        .detail-label {
+            color: #555;
+        }
+
+
+        .detail-value {
+            font-weight: 600;
+            color: #111;
+            text-align: right;
+        }
+
+
+        .status-confirmed {
+            color: #008f5a;
+            font-weight: 700;
+        }
+
+
+        /* =====================================================
+           ORDER ITEMS
+           ===================================================== */
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #eeeeee;
+        }
+
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+
+        .item-name {
+            font-weight: 600;
+            color: #222;
+            font-size: 14px;
+        }
+
+
+        .item-details {
+            color: #777;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+
+        .item-total {
+            font-weight: 700;
+            color: #111;
+        }
+
+
+        /* =====================================================
+           PRICE BREAKDOWN
+           ===================================================== */
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+
+
+        .price-label {
+            color: #444;
+        }
+
+
+        .price-value {
+            font-weight: 600;
+            color: #111;
+        }
+
+
+        .dynamic-price {
+            color: #ff4f2f;
+        }
+
+
+        .discount-price {
+            color: #008f5a;
+        }
+
+
+        .price-divider {
+            border: none;
+            border-top: 1px solid #dddddd;
+            margin: 12px 0;
+        }
+
+
+        .final-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 8px;
+        }
+
+
+        .final-label {
+            font-size: 21px;
+            font-weight: 700;
+        }
+
+
+        .final-value {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+
+        /* =====================================================
+           DISCOUNT BREAKDOWN
+           ===================================================== */
+
+        .discount-section {
+            margin-top: 22px;
+            padding-top: 20px;
+            border-top: 1px solid #eeeeee;
+        }
+
+
+        .discount-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+
+        .discount-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+
+
+        .discount-name {
+            color: #444;
+        }
+
+
+        .discount-value {
+            color: #008f5a;
+            font-weight: 600;
+        }
+
+
+        .coupon-code {
+            color: #777;
+            font-size: 12px;
+            margin-left: 4px;
+        }
+
+
+        .combined-discount {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #dddddd;
+        }
+
+
+        .maximum-discount {
+            color: #777;
+            font-size: 13px;
+        }
+
+
+        .final-discount {
+            margin-top: 12px;
+            padding-top: 14px;
+            border-top: 1px solid #eeeeee;
+        }
+
+
+        .final-discount .discount-value {
+            font-size: 17px;
+        }
+
+
+        /* =====================================================
+           DISCOUNT CAP WARNING
+           ===================================================== */
+
+        .cap-warning {
+            margin-top: 15px;
+            padding: 12px 14px;
+            background: #fff3e8;
+            color: #d96b00;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+
+        /* =====================================================
+           INFO MESSAGE
+           ===================================================== */
+
+        .pricing-note {
+            margin-top: 18px;
+            padding: 13px 15px;
+            background: #fff8ef;
+            border-radius: 8px;
+            color: #777;
+            font-size: 12px;
+        }
+
+
+        /* =====================================================
+           LOYALTY INFORMATION
+           ===================================================== */
+
+        .loyalty-box {
+            background: #f7f8fc;
+            border-radius: 9px;
+            padding: 15px;
+            margin-top: 8px;
+        }
+
+
+        .loyalty-heading {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+
+        .loyalty-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 20px;
+        }
+
+
+        .loyalty-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+
+        .loyalty-label {
+            color: #444;
+        }
+
+
+        .loyalty-value {
+            font-weight: 600;
+        }
+
+
+        /* =====================================================
+           POINTS EARNED
+           ===================================================== */
+
+        .points-earned {
+            margin-top: 12px;
+            padding: 13px 15px;
+            background: #fff8eb;
+            border-radius: 9px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+
+        .points-value {
+            font-weight: 700;
+        }
+
+
+        /* =====================================================
+           CURRENT LOYALTY
+           ===================================================== */
+
+        .current-loyalty {
+            margin-top: 12px;
+            padding: 13px 15px;
+            background: #eefaf5;
+            border-radius: 9px;
+        }
+
+
+        /* =====================================================
+           BUTTONS
+           ===================================================== */
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 25px;
+            margin-bottom: 40px;
+        }
+
+
+        .action-button {
+            text-decoration: none;
+            padding: 12px 22px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+
+        .primary-button {
+            background: #ff5a36;
+            color: white;
+        }
+
+
+        .primary-button:hover {
+            background: #e94b2b;
+        }
+
+
+        .secondary-button {
+            background: #f0f1f6;
+            color: #333;
+        }
+
+
+        .secondary-button:hover {
+            background: #e4e5eb;
+        }
+
+
+        /* =====================================================
+           RESPONSIVE
+           ===================================================== */
+
+        @media (max-width: 700px) {
+
+            .confirmation-container {
+                margin: 20px auto;
+                padding: 0 12px;
+            }
+
+
+            .success-header h1 {
+                font-size: 25px;
+            }
+
+
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+
+
+            .loyalty-grid {
+                grid-template-columns: 1fr;
+            }
+
+
+            .order-item {
+                gap: 15px;
+            }
+
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+
+            .action-button {
+                text-align: center;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     NAVBAR
+     ========================================================= -->
+
+<nav class="navbar">
+
+    <div class="logo">
+        🍴 FoodHub
+    </div>
+
+
+    <ul class="nav-links">
+
+        <li>
+            <a href="/">
+                Home
+            </a>
+        </li>
+
+
+        <li>
+            <a href="/restaurants">
+                Restaurants
+            </a>
+        </li>
+
+
+        <li>
+            <a href="/#features">
+                Features
+            </a>
+        </li>
+
+
+        <li>
+            <a href="/cart">
+                🛒 Cart
+            </a>
+        </li>
+
+    </ul>
+
+</nav>
+
+
+
+<!-- =========================================================
+     MAIN CONTAINER
+     ========================================================= -->
+
+<div class="confirmation-container">
+
+
+    <!-- =====================================================
+         SUCCESS HEADER
+         ===================================================== -->
+
+    <div class="success-header">
+
+        <span class="success-badge">
+            Order Confirmed
+        </span>
+
+
+        <h1>
+            🎉 Order Placed Successfully!
+        </h1>
+
+
+        <p>
+            Thank you for ordering with FoodHub.
+            Your order has been confirmed.
+        </p>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         ORDER DETAILS
+         ===================================================== -->
+
+    <div class="confirmation-card">
+
+        <div class="card-title">
+
+            📋 Order Details
+
+        </div>
+
+
+        <div class="details-grid">
+
+
+            <div class="detail-row">
+
+                <span class="detail-label">
+                    Order ID
+                </span>
+
+                <span class="detail-value"
+                      th:text="${order.orderId}">
+                    1
+                </span>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span class="detail-label">
+                    Status
+                </span>
+
+                <span class="status-confirmed"
+                      th:text="${order.status}">
+                    CONFIRMED
+                </span>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span class="detail-label">
+                    Customer
+                </span>
+
+                <span class="detail-value"
+                      th:text="${customer.name}">
+                    Pradheep
+                </span>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span class="detail-label">
+                    Restaurant
+                </span>
+
+                <span class="detail-value"
+                      th:text="${restaurant.name}">
+                    Spice Garden
+                </span>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span class="detail-label">
+                    Delivery Address
+                </span>
+
+                <span class="detail-value"
+                      th:text="${customer.address}">
+                    Vellore
+                </span>
+
+            </div>
+
+
+            <div class="detail-row">
+
+                <span class="detail-label">
+                    Order Time
+                </span>
+
+                <span class="detail-value"
+                      th:text="${order.orderDateTime}">
+                    2026-09-18
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         ORDERED ITEMS
+         ===================================================== -->
+
+    <div class="confirmation-card">
+
+        <div class="card-title">
+
+            🍽️ Ordered Items
+
+        </div>
+
+
+        <div th:each="item : ${order.items}"
+             class="order-item">
+
+
+            <div>
+
+                <div class="item-name"
+                     th:text="${item.menuItem.name}">
+
+                    Chicken Biryani
+
+                </div>
+
+
+                <div class="item-details">
+
+                    Quantity:
+
+                    <span th:text="${item.quantity}">
+                        1
+                    </span>
+
+                    × Rs.
+
+                    <span th:text="${#numbers.formatDecimal(item.itemPrice, 1, 2)}">
+                        220.00
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="item-total">
+
+                Rs.
+
+                <span th:text="${#numbers.formatDecimal(item.totalPrice, 1, 2)}">
+                    220.00
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         FINAL PRICE BREAKDOWN
+         ===================================================== -->
+
+    <div class="confirmation-card">
+
+
+        <div class="card-title">
+
+            ⚡ Final Price Breakdown
+
+        </div>
+
+
+        <!-- BASE SUBTOTAL -->
+
+        <div class="price-row">
+
+            <span class="price-label">
+                Base Subtotal
+            </span>
+
+            <span class="price-value">
+
+                Rs.
+
+                <span th:text="${#numbers.formatDecimal(originalSubtotal, 1, 2)}">
+                    220.00
+                </span>
+
+            </span>
+
+        </div>
+
+
+        <!-- DYNAMIC PRICING -->
+
+        <div class="price-row">
+
+            <span class="price-label">
+                ⚡ Dynamic Pricing Adjustment
+            </span>
+
+            <span class="price-value dynamic-price">
+
+                <span th:if="${dynamicPricingAmount >= 0}">
+                    + Rs.
+                </span>
+
+                <span th:if="${dynamicPricingAmount < 0}">
+                    − Rs.
+                </span>
+
+
+                <span th:text="${#numbers.formatDecimal(T(java.lang.Math).abs(dynamicPricingAmount), 1, 2)}">
+                    33.00
+                </span>
+
+            </span>
+
+        </div>
+
+
+        <!-- DYNAMIC SUBTOTAL -->
+
+        <div class="price-row">
+
+            <span class="price-label">
+                Subtotal After Dynamic Pricing
+            </span>
+
+            <span class="price-value">
+
+                Rs.
+
+                <span th:text="${#numbers.formatDecimal(dynamicSubtotal, 1, 2)}">
+                    253.00
+                </span>
+
+            </span>
+
+        </div>
+
+
+
+        <!-- =================================================
+             DISCOUNT BREAKDOWN
+             ================================================= -->
+
+        <div class="discount-section">
+
+
+            <div class="discount-title">
+
+                🏷️ Discount Breakdown
+
+            </div>
+
+
+            <!-- LOYALTY -->
+
+            <div class="discount-row">
+
+                <span class="discount-name">
+
+                    🏆 Loyalty Discount
+
+                </span>
+
+
+                <span class="discount-value">
+
+                    − Rs.
+
+                    <span th:text="${#numbers.formatDecimal(loyaltyDiscountAmount, 1, 2)}">
+                        25.30
+                    </span>
+
+                </span>
+
+            </div>
+
+
+
+            <!-- BULK -->
+
+            <div class="discount-row">
+
+                <span class="discount-name">
+
+                    📦 Bulk Order Discount
+
+                </span>
+
+
+                <span class="discount-value">
+
+                    − Rs.
+
+                    <span th:text="${#numbers.formatDecimal(bulkDiscountAmount, 1, 2)}">
+                        0.00
+                    </span>
+
+                </span>
+
+            </div>
+
+
+
+            <!-- COUPON -->
+
+            <div class="discount-row">
+
+                <span class="discount-name">
+
+                    🎟️ Coupon Discount
+
+
+                    <span th:if="${couponCode != null}"
+                          class="coupon-code">
+
+                        (<span th:text="${couponCode}">
+                            SAVE10
+                        </span>)
+
+                    </span>
+
+                </span>
+
+
+                <span class="discount-value">
+
+                    − Rs.
+
+                    <span th:text="${#numbers.formatDecimal(couponDiscountAmount, 1, 2)}">
+                        0.00
+                    </span>
+
+                </span>
+
+            </div>
+
+
+
+            <!-- COMBINED DISCOUNT -->
+
+            <div class="discount-row combined-discount">
+
+                <span class="discount-name">
+
+                    Combined Discount
+
+                </span>
+
+
+                <span class="price-value">
+
+                    Rs.
+
+                    <span th:text="${#numbers.formatDecimal(rawDiscountAmount, 1, 2)}">
+                        25.30
+                    </span>
+
+                </span>
+
+            </div>
+
+
+
+            <!-- MAXIMUM DISCOUNT -->
+
+            <div class="discount-row maximum-discount">
+
+                <span>
+
+                    Maximum Allowed Discount
+
+                </span>
+
+
+                <span>
+
+                    Rs.
+
+                    <span th:text="${#numbers.formatDecimal(maximumAllowedDiscount, 1, 2)}">
+                        75.90
+                    </span>
+
+                </span>
+
+            </div>
+
+
+
+            <!-- CAP WARNING -->
+
+            <div th:if="${discountCapped}"
+                 class="cap-warning">
+
+                ⚠️ The maximum 30% discount cap was applied.
+                The combined discount was reduced to the maximum
+                permitted amount.
+
+            </div>
+
+
+
+            <!-- FINAL DISCOUNT -->
+
+            <div class="discount-row final-discount">
+
+                <strong>
+
+                    Final Discount
+
+                </strong>
+
+
+                <strong class="discount-value">
+
+                    − Rs.
+
+                    <span th:text="${#numbers.formatDecimal(discountAmount, 1, 2)}">
+                        25.30
+                    </span>
+
+                </strong>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             DELIVERY
+             ================================================= -->
+
+        <hr class="price-divider">
+
+
+        <div class="price-row">
+
+            <span class="price-label">
+                🚴 Delivery Fee
+            </span>
+
+            <span class="price-value">
+
+                Rs.
+
+                <span th:text="${#numbers.formatDecimal(deliveryFee, 1, 2)}">
+                    30.00
+                </span>
+
+            </span>
+
+        </div>
+
+
+
+        <!-- =================================================
+             FINAL AMOUNT
+             ================================================= -->
+
+        <hr class="price-divider">
+
+
+        <div class="final-row">
+
+            <span class="final-label">
+                Final Amount
+            </span>
+
+
+            <span class="final-value">
+
+                Rs.
+
+                <span th:text="${#numbers.formatDecimal(finalAmount, 1, 2)}">
+                    257.70
+                </span>
+
+            </span>
+
+        </div>
+
+
+
+        <!-- =================================================
+             PRICING NOTE
+             ================================================= -->
+
+        <div class="pricing-note">
+
+            ⚡ Dynamic pricing was applied based on the current
+            pricing conditions. Applicable loyalty, bulk-order,
+            coupon discounts and delivery charges are included
+            in the final amount.
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         LOYALTY INFORMATION
+         ===================================================== -->
+
+    <div class="confirmation-card">
+
+
+        <div class="card-title">
+
+            🏆 Loyalty Information
+
+        </div>
+
+
+
+        <!-- BEFORE ORDER -->
+
+        <div class="loyalty-box">
+
+
+            <div class="loyalty-heading">
+
+                Before This Order
+
+            </div>
+
+
+            <div class="loyalty-grid">
+
+
+                <div class="loyalty-row">
+
+                    <span class="loyalty-label">
+                        Loyalty Tier
+                    </span>
+
+                    <span class="loyalty-value"
+                          th:text="${loyaltyTierBeforeOrder}">
+                        GOLD
+                    </span>
+
+                </div>
+
+
+                <div class="loyalty-row">
+
+                    <span class="loyalty-label">
+                        Loyalty Points
+                    </span>
+
+                    <span class="loyalty-value">
+
+                        <span th:text="${#numbers.formatDecimal(loyaltyPointsBeforeOrder, 1, 2)}">
+                            850.00
+                        </span>
+
+                    </span>
+
+                </div>
+
+
+                <div class="loyalty-row">
+
+                    <span class="loyalty-label">
+                        Discount Rate
+                    </span>
+
+                    <span class="loyalty-value">
+
+                        <span th:text="${#numbers.formatDecimal(loyaltyDiscountPercentage, 1, 2)}">
+                            10.00
+                        </span>%
+
+                    </span>
+
+                </div>
+
+
+                <div class="loyalty-row">
+
+                    <span class="loyalty-label">
+                        Loyalty Discount Applied
+                    </span>
+
+                    <span class="loyalty-value">
+
+                        Included in total discount
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- POINTS EARNED -->
+
+        <div class="points-earned">
+
+
+            <span>
+
+                🎁 Points Earned From This Order
+
+            </span>
+
+
+            <span class="points-value">
+
+                +
+
+                <span th:text="${#numbers.formatDecimal(loyaltyPointsEarned, 1, 2)}">
+                    402.60
+                </span>
+
+                points
+
+            </span>
+
+        </div>
+
+
+
+        <!-- CURRENT STATUS -->
+
+        <div class="current-loyalty">
+
+
+            <div class="loyalty-heading">
+
+                Current Loyalty Status
+
+            </div>
+
+
+            <div class="loyalty-grid">
+
+
+                <div class="loyalty-row">
+
+                    <span class="loyalty-label">
+                        Current Tier
+                    </span>
+
+                    <span class="loyalty-value"
+                          th:text="${customer.loyaltyTier}">
+                        GOLD
+                    </span>
+
+                </div>
+
+
+                <div class="loyalty-row">
+
+                    <span class="loyalty-label">
+                        Current Points
+                    </span>
+
+                    <span class="loyalty-value">
+
+                        <span th:text="${#numbers.formatDecimal(customer.loyaltyPoints, 1, 2)}">
+                            1252.60
+                        </span>
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         ACTION BUTTONS
+         ===================================================== -->
+
+    <div class="action-buttons">
+
+
+        <a href="/restaurants"
+           class="action-button secondary-button">
+
+            🍴 Order More Food
+
+        </a>
+
+
+        <a href="/"
+           class="action-button primary-button">
+
+            🏠 Back to Home
+
+        </a>
+
+    </div>
+
+
+</div>
+
+
+</body>
+
+</html>

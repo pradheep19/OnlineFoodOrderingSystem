@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>FoodHub | Restaurants</title>
+
+    <link rel="stylesheet"
+          th:href="@{/css/style.css}">
+
+</head>
+
+
+<body>
+
+
+<!-- ================= NAVBAR ================= -->
+
+<nav class="navbar">
+
+    <div class="logo">
+        🍴 FoodHub
+    </div>
+
+    <ul class="nav-links">
+
+        <li>
+            <a href="/">
+                Home
+            </a>
+        </li>
+
+        <li>
+            <a href="/restaurants">
+                Restaurants
+            </a>
+        </li>
+
+        <li>
+            <a href="/#features">
+                Features
+            </a>
+        </li>
+
+        <li>
+            <a href="/cart">
+                🛒 Cart
+            </a>
+        </li>
+
+    </ul>
+
+</nav>
+
+
+<!-- ================= RESTAURANTS ================= -->
+
+<section class="menu-section">
+
+    <div class="section-header">
+
+        <h2>
+            Explore Restaurants
+        </h2>
+
+        <p>
+            Choose a restaurant and discover its delicious menu
+        </p>
+
+    </div>
+
+
+    <div class="menu-grid">
+
+        <!-- RESTAURANT CARD -->
+
+        <div class="food-card"
+             th:each="restaurant : ${restaurants}">
+
+
+            <!-- RESTAURANT ICON -->
+
+            <div class="food-image">
+
+                <span th:if="${restaurant.restaurantId == 1}">
+                    🍛
+                </span>
+
+                <span th:if="${restaurant.restaurantId == 2}">
+                    🍕
+                </span>
+
+                <span th:if="${restaurant.restaurantId == 3}">
+                    🍔
+                </span>
+
+            </div>
+
+
+            <!-- RESTAURANT DETAILS -->
+
+            <div class="food-info">
+
+                <span class="category">
+                    Restaurant
+                </span>
+
+
+                <h3 th:text="${restaurant.name}">
+                    Restaurant Name
+                </h3>
+
+
+                <p class="description"
+                   th:text="${restaurant.address}">
+                    Restaurant Location
+                </p>
+
+
+                <p class="description">
+
+                    🕐
+
+                    <span th:text="${restaurant.openingTime}">
+                        10:00
+                    </span>
+
+                    -
+
+                    <span th:text="${restaurant.closingTime}">
+                        23:00
+                    </span>
+
+                </p>
+
+
+                <div class="food-bottom">
+
+
+                    <!-- DELIVERY RADIUS -->
+
+                    <span class="price">
+
+                        📍
+
+                        <span th:text="${restaurant.deliveryRadius}">
+                            10
+                        </span>
+
+                        km
+
+                    </span>
+
+
+                    <!-- VIEW MENU -->
+
+                    <a class="add-btn"
+                       th:href="@{/restaurant/{id}(id=${restaurant.restaurantId})}">
+
+                        View Menu
+
+                    </a>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ================= FOOTER ================= -->
+
+<footer>
+
+    <h3>
+        🍴 FoodHub
+    </h3>
+
+    <p>
+        Online Food Ordering System with Dynamic Pricing
+    </p>
+
+    <p>
+        Software Metrics Project
+    </p>
+
+</footer>
+
+
+</body>
+
+</html>

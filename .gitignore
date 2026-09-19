@@ -1,0 +1,13 @@
+@"
+# Maven build output
+target/
+
+# Java compiled files
+out/
+*.class
+
+# IDE settings
+.vscode/
+.idea/
+*.iml
+"@ | Set-Content .gitignore

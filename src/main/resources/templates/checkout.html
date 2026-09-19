@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>FoodHub | Checkout</title>
+
+    <link rel="stylesheet"
+          th:href="@{/css/style.css}">
+
+    <style>
+
+        .checkout-page {
+            padding: 45px 5%;
+            min-height: 70vh;
+        }
+
+        .checkout-container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .checkout-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .checkout-header h1 {
+            font-size: 42px;
+            margin: 10px 0;
+        }
+
+        .checkout-header p {
+            color: #777;
+        }
+
+        .checkout-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        .checkout-card {
+            background: white;
+            padding: 25px;
+            border-radius: 18px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+
+        .checkout-card h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 23px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 13px;
+            color: #555;
+        }
+
+        .info-row strong {
+            color: #222;
+        }
+
+        .order-items-card {
+            background: white;
+            padding: 25px;
+            border-radius: 18px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 17px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-name {
+            font-weight: 700;
+            font-size: 17px;
+        }
+
+        .item-details {
+            color: #777;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .item-price {
+            text-align: right;
+            font-weight: 700;
+        }
+
+        .price-card {
+            background: white;
+            padding: 30px;
+            border-radius: 18px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+
+        .price-card h2 {
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            color: #555;
+        }
+
+        .price-row strong {
+            color: #222;
+        }
+
+        .price-divider {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 20px 0;
+        }
+
+        .final-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 25px;
+            font-weight: 800;
+            padding-top: 10px;
+        }
+
+        .coupon-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .coupon-section h3 {
+            margin-bottom: 12px;
+        }
+
+        .coupon-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .coupon-input {
+            flex: 1;
+            padding: 13px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .coupon-input:focus {
+            border-color: #ff6b35;
+        }
+
+        .coupon-button {
+            padding: 13px 20px;
+            border: none;
+            border-radius: 10px;
+            background: #ff6b35;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .coupon-button:hover {
+            opacity: 0.9;
+        }
+
+        .validation-success {
+            background: #eafaf0;
+            color: #18794e;
+            padding: 17px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .validation-error {
+            background: #fff0ed;
+            color: #d63d27;
+            padding: 17px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .error-message {
+            background: #fff0ed;
+            color: #d63d27;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .checkout-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 25px;
+        }
+
+        .back-button {
+            display: inline-block;
+            text-decoration: none;
+            padding: 14px 25px;
+            border-radius: 11px;
+            background: #f2f2f2;
+            color: #333;
+            font-weight: 700;
+        }
+
+        .back-button:hover {
+            background: #e8e8e8;
+        }
+
+        .place-order-button {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 11px;
+            background: #ff6b35;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .place-order-button:hover {
+            transform: translateY(-2px);
+            opacity: 0.92;
+        }
+
+        .place-order-button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .smart-pricing {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff8ef;
+            border-radius: 12px;
+            color: #765;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 750px) {
+
+            .checkout-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .checkout-header h1 {
+                font-size: 32px;
+            }
+
+            .coupon-form {
+                flex-direction: column;
+            }
+
+            .coupon-button {
+                width: 100%;
+            }
+
+            .order-item {
+                gap: 15px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- ================= NAVBAR ================= -->
+
+<nav class="navbar">
+
+    <div class="logo">
+        🍴 FoodHub
+    </div>
+
+    <ul class="nav-links">
+
+        <li>
+            <a href="/">
+                Home
+            </a>
+        </li>
+
+        <li>
+            <a href="/restaurants">
+                Restaurants
+            </a>
+        </li>
+
+        <li>
+            <a href="/#features">
+                Features
+            </a>
+        </li>
+
+        <li>
+            <a href="/cart">
+                🛒 Cart
+            </a>
+        </li>
+
+    </ul>
+
+</nav>
+
+
+<!-- ================= CHECKOUT ================= -->
+
+<section class="checkout-page">
+
+    <div class="checkout-container">
+
+
+        <!-- HEADER -->
+
+        <div class="checkout-header">
+
+            <span class="category">
+                Checkout
+            </span>
+
+            <h1>
+                🧾 Review Your Order
+            </h1>
+
+            <p>
+                Check your order details before placing the order.
+            </p>
+
+        </div>
+
+
+        <!-- ERROR MESSAGE -->
+
+        <div class="error-message"
+             th:if="${error != null}"
+             th:text="${error}">
+
+            Error message
+
+        </div>
+
+
+        <!-- CUSTOMER + RESTAURANT -->
+
+        <div class="checkout-grid">
+
+
+            <!-- CUSTOMER -->
+
+            <div class="checkout-card">
+
+                <h2>
+                    👤 Customer
+                </h2>
+
+                <div class="info-row">
+
+                    <span>Name</span>
+
+                    <strong th:text="${customer.name}">
+                        Customer
+                    </strong>
+
+                </div>
+
+                <div class="info-row">
+
+                    <span>Address</span>
+
+                    <strong th:text="${customer.address}">
+                        Address
+                    </strong>
+
+                </div>
+
+                <div class="info-row">
+
+                    <span>Distance</span>
+
+                    <strong>
+
+                        <span th:text="${customer.distanceFromRestaurant}">
+                            0
+                        </span>
+
+                        km
+
+                    </strong>
+
+                </div>
+
+                <div class="info-row">
+
+                    <span>Loyalty Tier</span>
+
+                    <strong th:text="${customer.loyaltyTier}">
+                        REGULAR
+                    </strong>
+
+                </div>
+
+                <div class="info-row">
+
+                    <span>Loyalty Points</span>
+
+                    <strong th:text="${customer.loyaltyPoints}">
+                        0
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <!-- RESTAURANT -->
+
+            <div class="checkout-card">
+
+                <h2>
+                    🍴 Restaurant
+                </h2>
+
+                <div class="info-row">
+
+                    <span>Name</span>
+
+                    <strong th:text="${restaurant.name}">
+                        FoodHub
+                    </strong>
+
+                </div>
+
+                <div class="info-row">
+
+                    <span>Location</span>
+
+                    <strong th:text="${restaurant.address}">
+                        Vellore
+                    </strong>
+
+                </div>
+
+                <div class="info-row">
+
+                    <span>Opening</span>
+
+                    <strong th:text="${restaurant.openingTime}">
+                        10:00
+                    </strong>
+
+                </div>
+
+                <div class="info-row">
+
+                    <span>Closing</span>
+
+                    <strong th:text="${restaurant.closingTime}">
+                        23:00
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================= ORDER ITEMS ================= -->
+
+        <div class="order-items-card">
+
+            <h2>
+                🍽️ Order Items
+            </h2>
+
+
+            <!-- IMPORTANT:
+                 Use cart.items, NOT order.items.
+                 The Order object does not exist yet.
+            -->
+
+            <div class="order-item"
+                 th:each="item : ${cart.items}">
+
+
+                <div>
+
+                    <div class="item-name"
+                         th:text="${item.menuItem.name}">
+
+                        Food Item
+
+                    </div>
+
+                    <div class="item-details">
+
+                        Quantity:
+
+                        <strong th:text="${item.quantity}">
+                            1
+                        </strong>
+
+                        ×
+
+                        Rs.
+
+                        <span th:text="${item.itemPrice}">
+                            0
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div class="item-price">
+
+                    Rs.
+
+                    <span th:text="${item.totalPrice}">
+                        0
+                    </span>
+
+                </div>
+
+
+            </div>
+
+
+            <div class="smart-pricing">
+
+                ⚡ <strong>Smart Pricing:</strong>
+
+                Final pricing is calculated using the dynamic pricing,
+                loyalty discount, bulk discount, coupon and delivery rules.
+
+            </div>
+
+        </div>
+
+
+        <!-- ================= PRICE BREAKDOWN ================= -->
+
+        <div class="price-card">
+
+            <h2>
+                ⚡ Smart Price Breakdown
+            </h2>
+
+
+            <!-- BASE SUBTOTAL -->
+
+            <div class="price-row">
+
+                <span>
+                    Base Subtotal
+                </span>
+
+                <strong>
+
+                    Rs.
+
+                    <span th:text="${subtotal}">
+                        0
+                    </span>
+
+                </strong>
+
+            </div>
+
+
+            <!-- DYNAMIC PRICING -->
+
+            <div class="price-row">
+
+                <span>
+                    ⚡ Dynamic Pricing
+                </span>
+
+                <strong>
+                    Calculated at Place Order
+                </strong>
+
+            </div>
+
+
+            <!-- DISCOUNTS -->
+
+            <div class="price-row">
+
+                <span>
+                    🏆 Loyalty Discount
+                </span>
+
+                <strong>
+                    Calculated at Place Order
+                </strong>
+
+            </div>
+
+
+            <div class="price-row">
+
+                <span>
+                    📦 Bulk Discount
+                </span>
+
+                <strong>
+                    Calculated at Place Order
+                </strong>
+
+            </div>
+
+
+            <div class="price-row">
+
+                <span>
+                    🎟️ Coupon Discount
+                </span>
+
+                <strong>
+                    Calculated at Place Order
+                </strong>
+
+            </div>
+
+
+            <hr class="price-divider">
+
+
+            <!-- DELIVERY -->
+
+            <div class="price-row">
+
+                <span>
+                    🚴 Delivery Fee
+                </span>
+
+                <strong>
+
+                    Rs.
+
+                    <span th:text="${deliveryFee}">
+                        0
+                    </span>
+
+                </strong>
+
+            </div>
+
+
+            <hr class="price-divider">
+
+
+            <!-- CURRENT TOTAL -->
+
+            <div class="final-row">
+
+                <span>
+                    Current Total
+                </span>
+
+                <span>
+
+                    Rs.
+
+                    <span th:text="${subtotal}">
+                        0
+                    </span>
+
+                </span>
+
+            </div>
+
+
+            <!-- COUPON -->
+
+            <div class="coupon-section">
+
+                <h3>
+                    🎟️ Apply Coupon
+                </h3>
+
+                <p style="color:#777;font-size:14px;">
+                    Available sample coupons:
+                    <strong>SAVE10</strong>
+                    and
+                    <strong>FOOD20</strong>
+                </p>
+
+
+                <form method="post"
+                      action="/checkout/place-order"
+                      class="coupon-form">
+
+                    <input
+                            type="text"
+                            name="couponCode"
+                            class="coupon-input"
+                            placeholder="Enter coupon code">
+
+                    <button type="submit"
+                            class="coupon-button">
+
+                        Apply & Place Order
+
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================= VALIDATION ================= -->
+
+        <div class="validation-success"
+             th:if="${orderValid != null && deliveryAvailable != null && orderValid && deliveryAvailable}">
+
+            ✓ Order is valid and delivery is available.
+
+        </div>
+
+
+        <div class="validation-error"
+             th:if="${orderValid != null && deliveryAvailable != null && (!orderValid || !deliveryAvailable)}">
+
+            ⚠ Order cannot currently be placed.
+
+        </div>
+
+
+        <!-- ================= ACTIONS ================= -->
+
+        <div class="checkout-actions">
+
+            <a href="/cart"
+               class="back-button">
+
+                ← Back to Cart
+
+            </a>
+
+
+            <!-- Actual Place Order button -->
+
+            <form method="post"
+                  action="/checkout/place-order">
+
+                <button type="submit"
+                        class="place-order-button">
+
+                    Place Order →
+
+                </button>
+
+            </form>
+
+        </div>
+
+
+    </div>
+
+</section>
+
+
+<!-- ================= FOOTER ================= -->
+
+<footer>
+
+    <h3>
+        🍴 FoodHub
+    </h3>
+
+    <p>
+        Online Food Ordering System with Dynamic Pricing
+    </p>
+
+    <p>
+        Software Metrics Project
+    </p>
+
+</footer>
+
+
+</body>
+
+</html>

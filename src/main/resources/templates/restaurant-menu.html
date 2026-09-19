@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>
+        FoodHub | Restaurant Menu
+    </title>
+
+    <link rel="stylesheet"
+          th:href="@{/css/style.css}">
+
+</head>
+
+
+<body>
+
+
+<!-- ================= NAVBAR ================= -->
+
+<nav class="navbar">
+
+    <div class="logo">
+        🍴 FoodHub
+    </div>
+
+
+    <ul class="nav-links">
+
+        <li>
+            <a href="/">
+                Home
+            </a>
+        </li>
+
+        <li>
+            <a href="/restaurants">
+                Restaurants
+            </a>
+        </li>
+
+        <li>
+            <a href="/#features">
+                Features
+            </a>
+        </li>
+
+        <li>
+            <a href="/cart">
+                🛒 Cart
+            </a>
+        </li>
+
+    </ul>
+
+</nav>
+
+
+<!-- ================= RESTAURANT HEADER ================= -->
+
+<section class="menu-section">
+
+
+    <div class="section-header">
+
+
+        <span class="category">
+            Restaurant
+        </span>
+
+
+        <h2 th:text="${restaurant.name}">
+            Restaurant Name
+        </h2>
+
+
+        <p th:text="${restaurant.address}">
+            Restaurant Address
+        </p>
+
+
+        <p>
+
+            🕐
+
+            <span th:text="${restaurant.openingTime}">
+                10:00
+            </span>
+
+            -
+
+            <span th:text="${restaurant.closingTime}">
+                23:00
+            </span>
+
+
+            &nbsp;&nbsp;
+
+
+            📍
+
+            <span th:text="${restaurant.deliveryRadius}">
+                10
+            </span>
+
+            km delivery
+
+        </p>
+
+
+    </div>
+
+
+    <!-- ================= MENU ITEMS ================= -->
+
+    <div class="menu-grid">
+
+
+        <div class="food-card"
+             th:each="item : ${menuItems}">
+
+
+            <!-- FOOD IMAGE -->
+
+            <div class="food-image">
+
+
+                <span th:if="${item.category == 'Main Course'}">
+                    🍛
+                </span>
+
+
+                <span th:if="${item.category == 'Pizza'}">
+                    🍕
+                </span>
+
+
+                <span th:if="${item.category == 'Fast Food'}">
+                    🍔
+                </span>
+
+
+                <span th:if="${item.category == 'Dessert'}">
+                    🍦
+                </span>
+
+
+                <span th:if="${item.category == 'Sides'}">
+                    🥖
+                </span>
+
+
+            </div>
+
+
+            <!-- FOOD DETAILS -->
+
+            <div class="food-info">
+
+
+                <span class="category"
+                      th:text="${item.category}">
+
+                    Category
+
+                </span>
+
+
+                <h3 th:text="${item.name}">
+
+                    Food Item
+
+                </h3>
+
+
+                <p class="description">
+
+                    Freshly prepared and ready to order.
+
+                </p>
+
+
+                <div class="food-bottom">
+
+
+                    <!-- PRICE -->
+
+                    <span class="price">
+
+                        Rs.
+
+                        <span th:text="${item.basePrice}">
+                            0
+                        </span>
+
+                    </span>
+
+
+                    <!-- ADD TO CART -->
+
+                    <form method="post"
+                          th:action="@{/cart/add/{id}(id=${item.itemId})}">
+
+                        <button class="add-btn"
+                                type="submit">
+
+                            + Add
+
+                        </button>
+
+                    </form>
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+    <!-- ================= BACK BUTTON ================= -->
+
+    <div style="
+        text-align:center;
+        margin-top:35px;
+    ">
+
+
+        <a href="/restaurants"
+           class="hero-button">
+
+            ← Back to Restaurants
+
+        </a>
+
+
+    </div>
+
+
+</section>
+
+
+<!-- ================= FOOTER ================= -->
+
+<footer>
+
+
+    <h3>
+        🍴 FoodHub
+    </h3>
+
+
+    <p>
+        Online Food Ordering System with Dynamic Pricing
+    </p>
+
+
+    <p>
+        Software Metrics Project
+    </p>
+
+
+</footer>
+
+
+</body>
+
+</html>
