@@ -49,9 +49,23 @@
         </li>
 
 
+        <!-- ================= ORDER HISTORY ================= -->
+
+        <!-- Show Orders only when customer is logged in -->
+
+        <li th:if="${session.loggedInCustomer != null}">
+
+            <a href="/orders">
+                📋 Orders
+            </a>
+
+        </li>
+
+
         <!-- ================= LOGIN ================= -->
 
         <!-- Show Login when nobody is logged in -->
+
         <li th:if="${session.loggedInCustomer == null}">
 
             <a href="/login">
@@ -64,22 +78,28 @@
         <!-- ================= LOGGED-IN CUSTOMER ================= -->
 
         <!-- Show customer information after login -->
+
         <li th:if="${session.loggedInCustomer != null}">
 
             <a href="/restaurants"
                style="font-weight:600;">
 
                 👤
+
                 <span th:text="${session.loggedInCustomer.name}">
                     Customer
                 </span>
 
                 <span>
+
                     (
+
                     <span th:text="${session.loggedInCustomer.loyaltyTier}">
                         REGULAR
                     </span>
+
                     )
+
                 </span>
 
             </a>
@@ -203,7 +223,7 @@
     <div class="menu-grid">
 
 
-        <!-- SPICE GARDEN -->
+        <!-- ================= SPICE GARDEN ================= -->
 
         <div class="food-card">
 
@@ -267,7 +287,7 @@
         </div>
 
 
-        <!-- PIZZA PALACE -->
+        <!-- ================= PIZZA PALACE ================= -->
 
         <div class="food-card">
 
@@ -331,7 +351,7 @@
         </div>
 
 
-        <!-- BURGER HUB -->
+        <!-- ================= BURGER HUB ================= -->
 
         <div class="food-card">
 
@@ -398,7 +418,7 @@
     </div>
 
 
-    <!-- VIEW ALL -->
+    <!-- ================= VIEW ALL ================= -->
 
     <div style="
         text-align:center;
@@ -425,6 +445,8 @@
 <section class="features"
          id="features">
 
+
+    <!-- ================= DYNAMIC PRICING ================= -->
 
     <div class="feature">
 
@@ -454,6 +476,8 @@
     </div>
 
 
+    <!-- ================= SMART DISCOUNTS ================= -->
+
     <div class="feature">
 
 
@@ -481,6 +505,8 @@
 
     </div>
 
+
+    <!-- ================= FAST DELIVERY ================= -->
 
     <div class="feature">
 
@@ -542,6 +568,8 @@
     <div class="features">
 
 
+        <!-- ================= STEP 1 ================= -->
+
         <div class="feature">
 
 
@@ -570,6 +598,8 @@
         </div>
 
 
+        <!-- ================= STEP 2 ================= -->
+
         <div class="feature">
 
 
@@ -597,6 +627,8 @@
 
         </div>
 
+
+        <!-- ================= STEP 3 ================= -->
 
         <div class="feature">
 

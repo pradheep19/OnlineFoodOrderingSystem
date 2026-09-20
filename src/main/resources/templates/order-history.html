@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>FoodHub | Order History</title>
+
+    <link rel="stylesheet"
+          th:href="@{/css/style.css}">
+
+    <style>
+
+        .history-page {
+            max-width: 1100px;
+            margin: 45px auto 80px;
+            padding: 0 20px;
+        }
+
+        .history-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .history-header h1 {
+            margin-bottom: 8px;
+        }
+
+        .history-header p {
+            color: #777;
+        }
+
+        .empty-orders {
+            background: #fff;
+            border-radius: 16px;
+            padding: 50px 25px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .order-card {
+            background: #fff;
+            border-radius: 16px;
+            margin-bottom: 22px;
+            padding: 24px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .order-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .order-number {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .order-card-header small {
+            color: #888;
+        }
+
+        .order-status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #eafaf0;
+            color: #159447;
+        }
+
+        .order-meta {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            padding: 18px 0;
+        }
+
+        .meta-label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .meta-value {
+            font-weight: 600;
+        }
+
+        .items-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            color: #444;
+        }
+
+        .order-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid #eee;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .total-amount {
+            color: #ff563d;
+        }
+
+        .explore-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 11px 20px;
+            background: #ff563d;
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+        }
+
+        .explore-button:hover {
+            opacity: 0.9;
+        }
+
+        @media (max-width: 700px) {
+
+            .history-page {
+                margin-top: 25px;
+            }
+
+            .order-meta {
+                grid-template-columns: 1fr;
+            }
+
+            .order-card-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .order-item {
+                gap: 15px;
+            }
+
+            .order-total {
+                font-size: 16px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     NAVBAR
+     ========================================================= -->
+
+<nav class="navbar">
+
+    <div class="logo">
+
+        🍴 FoodHub
+
+    </div>
+
+
+    <ul class="nav-links">
+
+
+        <!-- HOME -->
+
+        <li>
+
+            <a href="/">
+
+                Home
+
+            </a>
+
+        </li>
+
+
+        <!-- RESTAURANTS -->
+
+        <li>
+
+            <a href="/restaurants">
+
+                Restaurants
+
+            </a>
+
+        </li>
+
+
+        <!-- FEATURES -->
+
+        <li>
+
+            <a href="/#features">
+
+                Features
+
+            </a>
+
+        </li>
+
+
+        <!-- ORDER HISTORY -->
+
+        <li th:if="${session.loggedInCustomer != null}">
+
+            <a href="/orders">
+
+                📋 Orders
+
+            </a>
+
+        </li>
+
+
+        <!-- LOGIN -->
+
+        <li th:if="${session.loggedInCustomer == null}">
+
+            <a href="/login">
+
+                🔐 Login
+
+            </a>
+
+        </li>
+
+
+        <!-- LOGGED-IN CUSTOMER -->
+
+        <li th:if="${session.loggedInCustomer != null}">
+
+            <a href="/restaurants"
+               style="font-weight:600;">
+
+                👤
+
+                <span th:text="${session.loggedInCustomer.name}">
+
+                    Customer
+
+                </span>
+
+
+                <span>
+
+                    (
+
+                    <span th:text="${session.loggedInCustomer.loyaltyTier}">
+
+                        REGULAR
+
+                    </span>
+
+                    )
+
+                </span>
+
+            </a>
+
+        </li>
+
+
+        <!-- LOGOUT -->
+
+        <li th:if="${session.loggedInCustomer != null}">
+
+            <a href="/logout"
+               style="color:#ff5a3c;">
+
+                Logout
+
+            </a>
+
+        </li>
+
+
+        <!-- CART -->
+
+        <li>
+
+            <a href="/cart">
+
+                🛒 Cart
+
+            </a>
+
+        </li>
+
+
+    </ul>
+
+</nav>
+
+
+
+<!-- =========================================================
+     ORDER HISTORY
+     ========================================================= -->
+
+<main class="history-page">
+
+
+    <!-- PAGE HEADER -->
+
+    <section class="history-header">
+
+        <h1>
+
+            Order History
+
+        </h1>
+
+
+        <p>
+
+            View your previous FoodHub orders
+            and their details.
+
+        </p>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         NO ORDERS
+         ===================================================== -->
+
+    <section th:if="${orders == null || orders.isEmpty()}"
+             class="empty-orders">
+
+
+        <h2>
+
+            No orders yet
+
+        </h2>
+
+
+        <p>
+
+            You haven't placed any orders yet.
+
+        </p>
+
+
+        <a th:href="@{/restaurants}"
+           class="explore-button">
+
+            Explore Restaurants →
+
+        </a>
+
+
+    </section>
+
+
+
+    <!-- =====================================================
+         ORDERS
+         ===================================================== -->
+
+    <section th:if="${orders != null && !orders.isEmpty()}">
+
+
+        <article class="order-card"
+                 th:each="order : ${orders}">
+
+
+            <!-- =================================================
+                 ORDER HEADER
+                 ================================================= -->
+
+            <div class="order-card-header">
+
+
+                <div>
+
+
+                    <div class="order-number">
+
+                        Order #
+
+                        <span th:text="${order.orderId}">
+
+                            1
+
+                        </span>
+
+                    </div>
+
+
+                    <small>
+
+                        <span th:text="${#temporals.format(
+                            order.orderDateTime,
+                            'dd MMM yyyy, hh:mm a'
+                        )}">
+
+                            20 Sep 2026, 05:26 PM
+
+                        </span>
+
+                    </small>
+
+
+                </div>
+
+
+                <!-- STATUS -->
+
+                <span class="order-status"
+                      th:text="${order.status}">
+
+                    CONFIRMED
+
+                </span>
+
+
+            </div>
+
+
+
+            <!-- =================================================
+                 ORDER INFORMATION
+                 ================================================= -->
+
+            <div class="order-meta">
+
+
+                <!-- RESTAURANT -->
+
+                <div>
+
+                    <span class="meta-label">
+
+                        Restaurant
+
+                    </span>
+
+
+                    <span class="meta-value"
+                          th:text="${order.restaurant.name}">
+
+                        Spice Garden
+
+                    </span>
+
+                </div>
+
+
+
+                <!-- ITEMS -->
+
+                <div>
+
+                    <span class="meta-label">
+
+                        Items
+
+                    </span>
+
+
+                    <span class="meta-value"
+                          th:text="${order.totalItemCount}">
+
+                        1
+
+                    </span>
+
+                </div>
+
+
+
+                <!-- DELIVERY -->
+
+                <div>
+
+                    <span class="meta-label">
+
+                        Delivery Fee
+
+                    </span>
+
+
+                    <span class="meta-value">
+
+                        Rs.
+
+                        <span th:text="${#numbers.formatDecimal(
+                            order.deliveryFee,
+                            1,
+                            2
+                        )}">
+
+                            50.00
+
+                        </span>
+
+                    </span>
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- =================================================
+                 ORDERED ITEMS
+                 ================================================= -->
+
+            <div class="items-title">
+
+                Ordered Items
+
+            </div>
+
+
+            <div th:each="item : ${order.items}"
+                 class="order-item">
+
+
+                <span>
+
+
+                    <span th:text="${item.menuItem.name}">
+
+                        Chicken Biryani
+
+                    </span>
+
+
+                    ×
+
+
+                    <span th:text="${item.quantity}">
+
+                        1
+
+                    </span>
+
+
+                </span>
+
+
+                <span>
+
+                    Rs.
+
+                    <span th:text="${#numbers.formatDecimal(
+                        item.totalPrice,
+                        1,
+                        2
+                    )}">
+
+                        275.00
+
+                    </span>
+
+                </span>
+
+
+            </div>
+
+
+
+            <!-- =================================================
+                 FINAL AMOUNT
+                 ================================================= -->
+
+            <div class="order-total">
+
+
+                <span>
+
+                    Final Amount
+
+                </span>
+
+
+                <span class="total-amount">
+
+                    Rs.
+
+                    <span th:text="${#numbers.formatDecimal(
+                        order.finalAmount,
+                        1,
+                        2
+                    )}">
+
+                        311.25
+
+                    </span>
+
+                </span>
+
+
+            </div>
+
+
+        </article>
+
+
+    </section>
+
+
+</main>
+
+
+
+<!-- =========================================================
+     FOOTER
+     ========================================================= -->
+
+<footer>
+
+
+    <h3>
+
+        🍴 FoodHub
+
+    </h3>
+
+
+    <p>
+
+        Online Food Ordering System
+        with Dynamic Pricing
+
+    </p>
+
+
+    <p>
+
+        Software Metrics Project
+
+    </p>
+
+
+</footer>
+
+
+</body>
+
+</html>

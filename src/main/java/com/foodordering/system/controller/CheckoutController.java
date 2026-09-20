@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 
 @Controller
@@ -164,6 +165,53 @@ public class CheckoutController {
         return restaurantDAO.findById(
                 restaurantId
         );
+    }
+
+
+    // =========================================================
+    // ORDER HISTORY
+    // =========================================================
+
+    @GetMapping("/orders")
+    public String orderHistory(
+            HttpSession session,
+            Model model) {
+
+        Customer customer =
+                getLoggedInCustomer(session);
+
+        if (customer == null) {
+            return "redirect:/login";
+        }
+
+        List<Order> customerOrders =
+                orderDAO.findAll()
+                        .stream()
+                        .filter(order ->
+                                order.getCustomer() != null
+                                && order.getCustomer().getCustomerId()
+                                == customer.getCustomerId()
+                        )
+                        .sorted(
+                                (first, second) ->
+                                        second.getOrderDateTime()
+                                                .compareTo(
+                                                        first.getOrderDateTime()
+                                                )
+                        )
+                        .toList();
+
+        model.addAttribute(
+                "orders",
+                customerOrders
+        );
+
+        model.addAttribute(
+                "customer",
+                customer
+        );
+
+        return "order-history";
     }
 
 

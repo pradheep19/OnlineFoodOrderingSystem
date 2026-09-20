@@ -11,3 +11,8 @@ out/
 .idea/
 *.iml
 "@ | Set-Content .gitignore
+# Local SQLite database
+foodordering.db
+
+# Generated Maven files
+effective-pom.xml
