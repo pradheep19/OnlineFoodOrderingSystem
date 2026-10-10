@@ -1,3 +1,4 @@
+
 package com.foodordering.system.dao;
 
 import com.foodordering.system.database.DatabaseManager;
@@ -13,20 +14,23 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Repository
 public class RestaurantDAO {
 
-    private Map<Integer, Restaurant> restaurants;
+    private static final Logger LOGGER =
+            Logger.getLogger(RestaurantDAO.class.getName());
+
+    private final Map<Integer, Restaurant> restaurants;
 
     public RestaurantDAO() {
         restaurants = new HashMap<>();
         initializeRestaurants();
-      
     }
 
     private void initializeRestaurants() {
-
         loadRestaurantsFromDatabase();
 
         if (restaurants.isEmpty()) {
@@ -46,20 +50,25 @@ public class RestaurantDAO {
                 """;
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql);
+             PreparedStatement statement =
+                     connection.prepareStatement(sql);
              ResultSet resultSet = statement.executeQuery()) {
 
             while (resultSet.next()) {
 
-                int restaurantId = resultSet.getInt("restaurant_id");
+                int restaurantId =
+                        resultSet.getInt("restaurant_id");
+
                 String name = resultSet.getString("name");
                 String address = resultSet.getString("address");
 
                 LocalTime openingTime =
-                        LocalTime.parse(resultSet.getString("opening_time"));
+                        LocalTime.parse(
+                                resultSet.getString("opening_time"));
 
                 LocalTime closingTime =
-                        LocalTime.parse(resultSet.getString("closing_time"));
+                        LocalTime.parse(
+                                resultSet.getString("closing_time"));
 
                 double deliveryRadius =
                         resultSet.getDouble("delivery_radius");
@@ -81,8 +90,11 @@ public class RestaurantDAO {
             }
 
         } catch (SQLException | RuntimeException e) {
-            System.err.println("Failed to load restaurants from SQLite.");
-            e.printStackTrace();
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Failed to load restaurants from SQLite.",
+                    e
+            );
         }
     }
 
@@ -97,43 +109,45 @@ public class RestaurantDAO {
                 """;
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
+             PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
 
             for (Restaurant restaurant : restaurants.values()) {
-
-                statement.setInt(1, restaurant.getRestaurantId());
-                statement.setString(2, restaurant.getName());
-                statement.setString(3, restaurant.getAddress());
-
-                statement.setString(
-                        4,
-                        restaurant.getOpeningTime().toString()
-                );
-
-                statement.setString(
-                        5,
-                        restaurant.getClosingTime().toString()
-                );
-
-                statement.setDouble(
-                        6,
-                        restaurant.getDeliveryRadius()
-                );
-
-                statement.setDouble(
-                        7,
-                        restaurant.getMinimumOrderValue()
-                );
-
+                setRestaurantParameters(statement, restaurant);
                 statement.addBatch();
             }
 
             statement.executeBatch();
 
         } catch (SQLException e) {
-            System.err.println("Failed to save restaurants to SQLite.");
-            e.printStackTrace();
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Failed to save restaurants to SQLite.",
+                    e
+            );
         }
+    }
+
+    // Set parameters used by restaurant INSERT statements
+    private void setRestaurantParameters(
+            PreparedStatement statement,
+            Restaurant restaurant) throws SQLException {
+
+        statement.setInt(1, restaurant.getRestaurantId());
+        statement.setString(2, restaurant.getName());
+        statement.setString(3, restaurant.getAddress());
+
+        statement.setString(
+                4, restaurant.getOpeningTime().toString());
+
+        statement.setString(
+                5, restaurant.getClosingTime().toString());
+
+        statement.setDouble(
+                6, restaurant.getDeliveryRadius());
+
+        statement.setDouble(
+                7, restaurant.getMinimumOrderValue());
     }
 
     // Existing sample restaurant data
@@ -202,7 +216,6 @@ public class RestaurantDAO {
         );
 
         saveRestaurantToDatabase(restaurant);
-
         return true;
     }
 
@@ -219,7 +232,6 @@ public class RestaurantDAO {
         );
 
         saveRestaurantToDatabase(restaurant);
-
         return true;
     }
 
@@ -231,7 +243,6 @@ public class RestaurantDAO {
         }
 
         restaurants.remove(restaurantId);
-
         deleteRestaurantFromDatabase(restaurantId);
 
         return true;
@@ -248,59 +259,42 @@ public class RestaurantDAO {
                 """;
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
+             PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
 
-            statement.setInt(1, restaurant.getRestaurantId());
-            statement.setString(2, restaurant.getName());
-            statement.setString(3, restaurant.getAddress());
-
-            statement.setString(
-                    4,
-                    restaurant.getOpeningTime().toString()
-            );
-
-            statement.setString(
-                    5,
-                    restaurant.getClosingTime().toString()
-            );
-
-            statement.setDouble(
-                    6,
-                    restaurant.getDeliveryRadius()
-            );
-
-            statement.setDouble(
-                    7,
-                    restaurant.getMinimumOrderValue()
-            );
-
+            setRestaurantParameters(statement, restaurant);
             statement.executeUpdate();
 
         } catch (SQLException e) {
-            System.err.println("Failed to save restaurant to SQLite.");
-            e.printStackTrace();
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Failed to save restaurant to SQLite.",
+                    e
+            );
         }
     }
 
     // Delete one restaurant from SQLite
-   private void deleteRestaurantFromDatabase(int restaurantId) {
+    private void deleteRestaurantFromDatabase(int restaurantId) {
 
-    String sql =
-            "DELETE FROM restaurants WHERE restaurant_id = ?";
+        String sql =
+                "DELETE FROM restaurants WHERE restaurant_id = ?";
 
-    try (Connection connection = DatabaseManager.getConnection();
-         PreparedStatement statement =
-                 connection.prepareStatement(sql)) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
 
-        statement.setInt(1, restaurantId);
+            statement.setInt(1, restaurantId);
+            statement.executeUpdate();
 
-        statement.executeUpdate();
-
-    } catch (SQLException e) {
-        System.err.println("Failed to delete restaurant from SQLite.");
-        e.printStackTrace();
+        } catch (SQLException e) {
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Failed to delete restaurant from SQLite.",
+                    e
+            );
+        }
     }
-}
 
     // Number of restaurants
     public int getRestaurantCount() {
