@@ -7,8 +7,13 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DatabaseManager {
+
+    private static final Logger LOGGER =
+            Logger.getLogger(DatabaseManager.class.getName());
 
     private static final String DATABASE_URL =
             "jdbc:sqlite:foodordering.db";
@@ -115,25 +120,23 @@ public class DatabaseManager {
             statement.execute(createMenuItemsTable);
             statement.execute(createOrdersTable);
 
-            // Use fixed SQL for the supported payment migrations.
+            // Preserve safe payment-column migrations.
             addPaymentMethodColumnIfMissing(connection);
             addPaymentStatusColumnIfMissing(connection);
 
             statement.execute(createOrderItemsTable);
 
-            System.out.println(
-                    "SQLite database initialized successfully.");
+            LOGGER.info("SQLite database initialized successfully.");
 
         } catch (SQLException e) {
-            System.err.println(
-                    "Database initialization failed.");
-            e.printStackTrace();
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Database initialization failed.",
+                    e
+            );
         }
     }
 
-    /*
-     * Adds payment_method only if it does not exist.
-     */
     private static void addPaymentMethodColumnIfMissing(
             Connection connection) throws SQLException {
 
@@ -142,18 +145,17 @@ public class DatabaseManager {
 
             try (Statement statement =
                          connection.createStatement()) {
+
                 statement.execute(
-                        "ALTER TABLE orders ADD COLUMN payment_method TEXT");
+                        "ALTER TABLE orders "
+                                + "ADD COLUMN payment_method TEXT");
             }
 
-            System.out.println(
+            LOGGER.info(
                     "Added column payment_method to table orders");
         }
     }
 
-    /*
-     * Adds payment_status only if it does not exist.
-     */
     private static void addPaymentStatusColumnIfMissing(
             Connection connection) throws SQLException {
 
@@ -162,19 +164,18 @@ public class DatabaseManager {
 
             try (Statement statement =
                          connection.createStatement()) {
+
                 statement.execute(
-                        "ALTER TABLE orders ADD COLUMN payment_status "
+                        "ALTER TABLE orders "
+                                + "ADD COLUMN payment_status "
                                 + "TEXT DEFAULT 'PENDING'");
             }
 
-            System.out.println(
+            LOGGER.info(
                     "Added column payment_status to table orders");
         }
     }
 
-    /*
-     * Checks whether a column exists using JDBC metadata.
-     */
     private static boolean columnExists(
             Connection connection,
             String tableName,
@@ -198,9 +199,6 @@ public class DatabaseManager {
         return false;
     }
 
-    /*
-     * Checks whether menu_items exists and contains restaurant_id.
-     */
     private static boolean menuItemsTableNeedsMigration(
             Connection connection) throws SQLException {
 
@@ -224,10 +222,6 @@ public class DatabaseManager {
             }
         }
 
-        if (!tableExists) {
-            return false;
-        }
-
-        return !hasRestaurantId;
+        return tableExists && !hasRestaurantId;
     }
 }
