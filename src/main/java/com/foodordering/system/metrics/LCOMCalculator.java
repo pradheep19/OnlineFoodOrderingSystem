@@ -35,14 +35,21 @@ private static final Pattern FIELD_PATTERN =
                 "([A-Za-z_$][A-Za-z0-9_$]*)\\s*(?:=|;)"
         );
 
+
 private static final Pattern METHOD_PATTERN =
         Pattern.compile(
                 "(?m)^\\s*" +
-                "(?:(?:public|protected|private|static|final|synchronized|native|abstract)\\s+)*" +
-                "[A-Za-z_$][A-Za-z0-9_$]*(?:\\s*<[^;{}]*>)?(?:\\[\\])*\\s+" +
+                "(?:(?:public|protected|private|static|final|" +
+                "synchronized|native|abstract)\\s+)*" +
+                "[A-Za-z_$][A-Za-z0-9_$]*" +
+                "(?:\\s*<[^;{}]*>)?(?:\\[\\])*\\s+" +
                 "([A-Za-z_$][A-Za-z0-9_$]*)\\s*" +
-                "\\([^;{}]*\\)\\s*(?:throws\\s+[A-Za-z_$][A-Za-z0-9_$.]*(?:\\s*,\\s*[A-Za-z_$][A-Za-z0-9_$.]*)*)?\\s*\\{"
+                "\\([^;{}]*\\)\\s*" +
+                "(?:throws\\s+[A-Za-z_$][A-Za-z0-9_$.]*" +
+                "(?:\\s*,\\s*[A-Za-z_$][A-Za-z0-9_$.]*)*)?" +
+                "\\s*\\{"
         );
+
 
 
     public static void main(String[] args) {
