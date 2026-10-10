@@ -2,10 +2,22 @@
 package com.foodordering.system.metrics;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+
+import javax.tools.JavaCompiler;
+import javax.tools.SimpleJavaFileObject;
+import javax.tools.ToolProvider;
+
+import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.MethodTree;
+import com.sun.source.util.JavacTask;
+import com.sun.source.util.TreePathScanner;
+import com.sun.source.util.Trees;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -13,66 +25,40 @@ import java.util.stream.Stream;
 
 public class LCOMCalculator {
 
-    private static final String SOURCE_DIRECTORY =
-            "src/main/java";
+    private static final String SOURCE_DIRECTORY = "src/main/java";
 
-    private static final String EXCLUDED_PACKAGE =
-            "metrics";
+    private static final String EXCLUDED_PACKAGE = "metrics";
 
     private static final Pattern CLASS_PATTERN =
             Pattern.compile(
                     "\\b(?:class|interface|enum)\\s+([A-Za-z_$][A-Za-z0-9_$]*)"
             );
 
-    
-private static final Pattern FIELD_PATTERN =
-        Pattern.compile(
-                "(?m)^\\s*" +
-                "(?:private|protected|public)\\s+" +
-                "(?!static\\b)" +
-                "(?:final\\s+)?" +
-                "[A-Za-z_$][A-Za-z0-9_$]*(?:\\s*<[^;{}]*>)?(?:\\[\\])*\\s+" +
-                "([A-Za-z_$][A-Za-z0-9_$]*)\\s*(?:=|;)"
-        );
-
-
-private static final Pattern METHOD_PATTERN =
-        Pattern.compile(
-                "(?m)^\\s*" +
-                "(?:(?:public|protected|private|static|final|" +
-                "synchronized|native|abstract)\\s+)*" +
-                "[A-Za-z_$][A-Za-z0-9_$]*" +
-                "(?:\\s*<[^;{}]*>)?(?:\\[\\])*\\s+" +
-                "([A-Za-z_$][A-Za-z0-9_$]*)\\s*" +
-                "\\([^;{}]*\\)\\s*" +
-                "(?:throws\\s+[A-Za-z_$][A-Za-z0-9_$.]*" +
-                "(?:\\s*,\\s*[A-Za-z_$][A-Za-z0-9_$.]*)*)?" +
-                "\\s*\\{"
-        );
-
-
+    private static final Pattern FIELD_PATTERN =
+            Pattern.compile(
+                    "(?m)^\\s*" +
+                    "(?:private|protected|public)\\s+" +
+                    "(?!static\\b)" +
+                    "(?:final\\s+)?" +
+                    "[A-Za-z_$][A-Za-z0-9_$]*(?:\\s*<[^;{}]*>)?(?:\\[\\])*\\s+" +
+                    "([A-Za-z_$][A-Za-z0-9_$]*)\\s*(?:=|;)"
+            );
 
     public static void main(String[] args) {
 
         Path sourcePath = Paths.get(SOURCE_DIRECTORY);
 
         try {
-
             List<Path> javaFiles;
 
             try (Stream<Path> paths = Files.walk(sourcePath)) {
-
                 javaFiles = paths
                         .filter(Files::isRegularFile)
-                        .filter(path ->
-                                path.toString().endsWith(".java"))
-                        .filter(path ->
-                                !path.toString()
-                                        .contains(
-                                                java.io.File.separator
-                                                        + EXCLUDED_PACKAGE
-                                                        + java.io.File.separator
-                                        ))
+                        .filter(path -> path.toString().endsWith(".java"))
+                        .filter(path -> !path.toString().contains(
+                                java.io.File.separator +
+                                EXCLUDED_PACKAGE +
+                                java.io.File.separator))
                         .collect(Collectors.toList());
             }
 
@@ -81,22 +67,18 @@ private static final Pattern METHOD_PATTERN =
                 return;
             }
 
-            Map<String, Integer> lcomResults =
-                    new TreeMap<>();
+            Map<String, Integer> lcomResults = new TreeMap<>();
 
             for (Path file : javaFiles) {
-
                 String source = Files.readString(file);
 
-                Matcher classMatcher =
-                        CLASS_PATTERN.matcher(source);
+                Matcher classMatcher = CLASS_PATTERN.matcher(source);
 
                 if (!classMatcher.find()) {
                     continue;
                 }
 
                 String className = classMatcher.group(1);
-
                 int lcom = calculateLCOM4(source);
 
                 lcomResults.put(className, lcom);
@@ -104,24 +86,16 @@ private static final Pattern METHOD_PATTERN =
 
             System.out.println();
             System.out.println(
-                    "=============================================================="
-            );
+                    "==============================================================");
             System.out.println(
-                    "       LCOM - LACK OF COHESION IN METHODS"
-            );
+                    "       LCOM - LACK OF COHESION IN METHODS");
             System.out.println(
-                    "=============================================================="
-            );
+                    "==============================================================");
 
-            System.out.printf(
-                    "%-35s %s%n",
-                    "Class",
-                    "LCOM4"
-            );
+            System.out.printf("%-35s %s%n", "Class", "LCOM4");
 
             System.out.println(
-                    "--------------------------------------------------------------"
-            );
+                    "--------------------------------------------------------------");
 
             int totalLCOM = 0;
 
@@ -131,39 +105,24 @@ private static final Pattern METHOD_PATTERN =
                 System.out.printf(
                         "%-35s %d%n",
                         entry.getKey(),
-                        entry.getValue()
-                );
+                        entry.getValue());
 
                 totalLCOM += entry.getValue();
             }
 
             int totalClasses = lcomResults.size();
 
-            double averageLCOM =
-                    totalClasses == 0
-                            ? 0
-                            : (double) totalLCOM / totalClasses;
+            double averageLCOM = totalClasses == 0
+                    ? 0
+                    : (double) totalLCOM / totalClasses;
 
             System.out.println(
-                    "--------------------------------------------------------------"
-            );
-
+                    "--------------------------------------------------------------");
+            System.out.println("Total Classes : " + totalClasses);
+            System.out.println("Total LCOM    : " + totalLCOM);
+            System.out.printf("Average LCOM  : %.2f%n", averageLCOM);
             System.out.println(
-                    "Total Classes : " + totalClasses
-            );
-
-            System.out.println(
-                    "Total LCOM    : " + totalLCOM
-            );
-
-            System.out.printf(
-                    "Average LCOM  : %.2f%n",
-                    averageLCOM
-            );
-
-            System.out.println(
-                    "=============================================================="
-            );
+                    "==============================================================");
 
         } catch (IOException e) {
             System.err.println("Error reading Java source files.");
@@ -173,14 +132,12 @@ private static final Pattern METHOD_PATTERN =
 
     /*
      * LCOM4 calculation:
-     * Each method accessing instance fields is a graph node.
-     * Methods accessing a common field are connected.
+     * Methods accessing a common instance field are connected.
      * LCOM4 equals the number of connected components.
      */
     private static int calculateLCOM4(String source) {
 
         Set<String> fields = new HashSet<>();
-
         Matcher fieldMatcher = FIELD_PATTERN.matcher(source);
 
         while (fieldMatcher.find()) {
@@ -191,54 +148,100 @@ private static final Pattern METHOD_PATTERN =
             return 0;
         }
 
-        Map<String, Set<String>> methodFields =
-                new LinkedHashMap<>();
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 
-        Matcher methodMatcher = METHOD_PATTERN.matcher(source);
+        if (compiler == null) {
+            throw new IllegalStateException(
+                    "A JDK is required to calculate LCOM4.");
+        }
 
-        while (methodMatcher.find()) {
+        Map<String, Set<String>> methodFields = new LinkedHashMap<>();
 
-            String methodName = methodMatcher.group(1);
+        SimpleJavaFileObject fileObject =
+                new SimpleJavaFileObject(
+                        URI.create("string:///Source.java"),
+                        SimpleJavaFileObject.Kind.SOURCE) {
 
-            int methodStart = methodMatcher.end();
+                    @Override
+                    public CharSequence getCharContent(
+                            boolean ignoreEncodingErrors) {
+                        return source;
+                    }
+                };
 
-            int methodEnd = findMethodEnd(source, methodStart);
+        try {
+            JavacTask task = (JavacTask) compiler.getTask(
+                    null,
+                    null,
+                    null,
+                    Arrays.asList("-proc:none"),
+                    null,
+                    Collections.singletonList(fileObject));
 
-            if (methodEnd <= methodStart) {
-                continue;
+            Iterator<? extends CompilationUnitTree> units =
+                    task.parse().iterator();
+
+            if (!units.hasNext()) {
+                return 0;
             }
 
-            String methodBody =
-                    source.substring(methodStart, methodEnd);
+            CompilationUnitTree unit = units.next();
+            Trees trees = Trees.instance(task);
+            var positions = trees.getSourcePositions();
 
-            Set<String> accessedFields = new HashSet<>();
+            new TreePathScanner<Void, Void>() {
 
-            for (String field : fields) {
+                @Override
+                public Void visitMethod(MethodTree method, Void unused) {
 
-                Pattern fieldReference =
-                        Pattern.compile(
-                                "\\b" + Pattern.quote(field) + "\\b"
-                        );
+                    if (method.getBody() == null) {
+                        return super.visitMethod(method, unused);
+                    }
 
-                if (fieldReference.matcher(methodBody).find()) {
-                    accessedFields.add(field);
+                    long start = positions.getStartPosition(
+                            unit, method.getBody());
+
+                    long end = positions.getEndPosition(
+                            unit, method.getBody());
+
+                    if (start < 0 || end <= start
+                            || end > source.length()) {
+                        return super.visitMethod(method, unused);
+                    }
+
+                    String body = source.substring(
+                            (int) start, (int) end);
+
+                    Set<String> accessedFields = new HashSet<>();
+
+                    for (String field : fields) {
+                        Pattern reference = Pattern.compile(
+                                "\\b" + Pattern.quote(field) + "\\b");
+
+                        if (reference.matcher(body).find()) {
+                            accessedFields.add(field);
+                        }
+                    }
+
+                    if (!accessedFields.isEmpty()) {
+                        String name = method.getName().toString();
+                        String uniqueName = name;
+                        int counter = 2;
+
+                        while (methodFields.containsKey(uniqueName)) {
+                            uniqueName = name + "#" + counter++;
+                        }
+
+                        methodFields.put(uniqueName, accessedFields);
+                    }
+
+                    return super.visitMethod(method, unused);
                 }
-            }
+            }.scan(unit, null);
 
-            if (!accessedFields.isEmpty()) {
-
-                String uniqueMethodName = methodName;
-                int counter = 2;
-
-                while (methodFields.containsKey(uniqueMethodName)) {
-                    uniqueMethodName = methodName + "#" + counter++;
-                }
-
-                methodFields.put(
-                        uniqueMethodName,
-                        accessedFields
-                );
-            }
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Unable to parse source for LCOM4.", e);
         }
 
         if (methodFields.isEmpty()) {
@@ -255,7 +258,6 @@ private static final Pattern METHOD_PATTERN =
         }
 
         for (int i = 0; i < methods.size(); i++) {
-
             for (int j = i + 1; j < methods.size(); j++) {
 
                 String methodA = methods.get(i);
@@ -277,66 +279,15 @@ private static final Pattern METHOD_PATTERN =
         int components = 0;
 
         for (String method : methods) {
-
             if (visited.contains(method)) {
                 continue;
             }
 
             components++;
-
             explore(method, graph, visited);
         }
 
         return components;
-    }
-
-    /*
-     * Finds the closing brace of a method body.
-     */
-    private static int findMethodEnd(String source, int start) {
-
-        int braceCount = 1;
-        boolean insideString = false;
-        boolean insideChar = false;
-
-        for (int i = start; i < source.length(); i++) {
-
-            char current = source.charAt(i);
-
-            char previous =
-                    i > 0 ? source.charAt(i - 1) : '\0';
-
-            if (current == '"'
-                    && previous != '\\'
-                    && !insideChar) {
-                insideString = !insideString;
-            }
-
-            if (current == '\''
-                    && previous != '\\'
-                    && !insideString) {
-                insideChar = !insideChar;
-            }
-
-            if (insideString || insideChar) {
-                continue;
-            }
-
-            if (current == '{') {
-                braceCount++;
-            }
-
-            if (current == '}') {
-
-                braceCount--;
-
-                if (braceCount == 0) {
-                    return i;
-                }
-            }
-        }
-
-        return -1;
     }
 
     /*
@@ -350,7 +301,6 @@ private static final Pattern METHOD_PATTERN =
         visited.add(method);
 
         for (String neighbour : graph.get(method)) {
-
             if (!visited.contains(neighbour)) {
                 explore(neighbour, graph, visited);
             }
