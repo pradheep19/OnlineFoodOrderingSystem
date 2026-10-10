@@ -3,6 +3,8 @@ package com.foodordering.system.dao;
 
 import com.foodordering.system.database.DatabaseManager;
 import com.foodordering.system.model.MenuItem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Connection;
@@ -17,6 +19,9 @@ import java.util.Map;
 
 @Repository
 public class MenuDAO {
+
+    private static final Logger logger =
+            LoggerFactory.getLogger(MenuDAO.class);
 
     private final Map<Integer, MenuItem> menuItems = new HashMap<>();
 
@@ -84,10 +89,8 @@ public class MenuDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println(
-                    "Failed to initialize sample menu data."
-            );
-            e.printStackTrace();
+            logger.error(
+                    "Failed to initialize sample menu data.", e);
         }
     }
 
@@ -197,10 +200,8 @@ public class MenuDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println(
-                    "Failed to load menu items from SQLite."
-            );
-            e.printStackTrace();
+            logger.error(
+                    "Failed to load menu items from SQLite.", e);
         }
     }
 
@@ -264,10 +265,8 @@ public class MenuDAO {
             menuItems.remove(itemId);
 
         } catch (SQLException e) {
-            System.err.println(
-                    "Failed to delete menu item from SQLite."
-            );
-            e.printStackTrace();
+            logger.error(
+                    "Failed to delete menu item from SQLite.", e);
         }
     }
 
@@ -314,10 +313,8 @@ public class MenuDAO {
             statement.executeUpdate();
 
         } catch (SQLException e) {
-            System.err.println(
-                    "Failed to save menu item to SQLite."
-            );
-            e.printStackTrace();
+            logger.error(
+                    "Failed to save menu item to SQLite.", e);
         }
     }
 
