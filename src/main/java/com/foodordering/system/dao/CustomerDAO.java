@@ -1,6 +1,10 @@
+
 package com.foodordering.system.dao;
 
 import org.springframework.stereotype.Repository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.foodordering.system.database.DatabaseManager;
 import com.foodordering.system.model.Customer;
 import com.foodordering.system.model.LoyaltyTier;
@@ -17,17 +21,17 @@ import java.util.Map;
 @Repository
 public class CustomerDAO {
 
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(CustomerDAO.class);
+
     private Map<Integer, Customer> customers;
 
     public CustomerDAO() {
         customers = new HashMap<>();
         initializeCustomers();
-
-        
     }
 
     private void initializeCustomers() {
-
         loadCustomersFromDatabase();
 
         if (customers.isEmpty()) {
@@ -93,12 +97,14 @@ public class CustomerDAO {
                 """;
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql);
+             PreparedStatement statement =
+                     connection.prepareStatement(sql);
              ResultSet resultSet = statement.executeQuery()) {
 
             while (resultSet.next()) {
 
-                int customerId = resultSet.getInt("customer_id");
+                int customerId =
+                        resultSet.getInt("customer_id");
                 String name = resultSet.getString("name");
                 String phoneNumber = resultSet.getString("phone");
                 String address = resultSet.getString("address");
@@ -115,8 +121,15 @@ public class CustomerDAO {
                 LoyaltyTier loyaltyTier;
 
                 try {
-                    loyaltyTier = LoyaltyTier.valueOf(loyaltyTierText);
-                } catch (Exception e) {
+                    loyaltyTier =
+                            LoyaltyTier.valueOf(loyaltyTierText);
+                } catch (IllegalArgumentException
+                         | NullPointerException e) {
+                    LOGGER.warn(
+                            "Invalid loyalty tier for customer ID {}. "
+                                    + "Using REGULAR.",
+                            customerId
+                    );
                     loyaltyTier = LoyaltyTier.REGULAR;
                 }
 
@@ -134,8 +147,8 @@ public class CustomerDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("Failed to load customers from SQLite.");
-            e.printStackTrace();
+            LOGGER.error(
+                    "Failed to load customers from SQLite.", e);
         }
     }
 
@@ -156,51 +169,32 @@ public class CustomerDAO {
                 """;
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
+             PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
 
             for (Customer customer : customers.values()) {
 
                 statement.setInt(
-                        1,
-                        customer.getCustomerId()
-                );
-
+                        1, customer.getCustomerId());
                 statement.setString(
-                        2,
-                        customer.getName()
-                );
-
+                        2, customer.getName());
                 statement.setString(
-                        3,
-                        customer.getPhoneNumber()
-                );
-
+                        3, customer.getPhoneNumber());
                 statement.setString(
-                        4,
-                        customer.getAddress()
-                );
-
+                        4, customer.getAddress());
                 statement.setDouble(
-                        5,
-                        customer.getDistanceFromRestaurant()
-                );
-
+                        5, customer.getDistanceFromRestaurant());
                 statement.setString(
-                        6,
-                        customer.getLoyaltyTier().name()
-                );
-
+                        6, customer.getLoyaltyTier().name());
                 statement.setDouble(
-                        7,
-                        customer.getLoyaltyPoints()
-                );
+                        7, customer.getLoyaltyPoints());
 
                 statement.executeUpdate();
             }
 
         } catch (SQLException e) {
-            System.err.println("Failed to save customers to SQLite.");
-            e.printStackTrace();
+            LOGGER.error(
+                    "Failed to save customers to SQLite.", e);
         }
     }
 
@@ -233,24 +227,23 @@ public class CustomerDAO {
                 """;
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
+             PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
 
-            statement.setInt(1, customer.getCustomerId());
-            statement.setString(2, customer.getName());
-            statement.setString(3, customer.getPhoneNumber());
-            statement.setString(4, customer.getAddress());
-            statement.setDouble(
-                    5,
-                    customer.getDistanceFromRestaurant()
-            );
+            statement.setInt(
+                    1, customer.getCustomerId());
             statement.setString(
-                    6,
-                    customer.getLoyaltyTier().name()
-            );
+                    2, customer.getName());
+            statement.setString(
+                    3, customer.getPhoneNumber());
+            statement.setString(
+                    4, customer.getAddress());
             statement.setDouble(
-                    7,
-                    customer.getLoyaltyPoints()
-            );
+                    5, customer.getDistanceFromRestaurant());
+            statement.setString(
+                    6, customer.getLoyaltyTier().name());
+            statement.setDouble(
+                    7, customer.getLoyaltyPoints());
 
             statement.executeUpdate();
 
@@ -259,8 +252,8 @@ public class CustomerDAO {
             return true;
 
         } catch (SQLException e) {
-            System.err.println("Failed to add customer to SQLite.");
-            e.printStackTrace();
+            LOGGER.error(
+                    "Failed to add customer to SQLite.", e);
             return false;
         }
     }
@@ -283,27 +276,23 @@ public class CustomerDAO {
                 """;
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
+             PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
 
-            statement.setString(1, customer.getName());
-            statement.setString(2, customer.getPhoneNumber());
-            statement.setString(3, customer.getAddress());
-            statement.setDouble(
-                    4,
-                    customer.getDistanceFromRestaurant()
-            );
             statement.setString(
-                    5,
-                    customer.getLoyaltyTier().name()
-            );
+                    1, customer.getName());
+            statement.setString(
+                    2, customer.getPhoneNumber());
+            statement.setString(
+                    3, customer.getAddress());
             statement.setDouble(
-                    6,
-                    customer.getLoyaltyPoints()
-            );
+                    4, customer.getDistanceFromRestaurant());
+            statement.setString(
+                    5, customer.getLoyaltyTier().name());
+            statement.setDouble(
+                    6, customer.getLoyaltyPoints());
             statement.setInt(
-                    7,
-                    customer.getCustomerId()
-            );
+                    7, customer.getCustomerId());
 
             int rowsUpdated = statement.executeUpdate();
 
@@ -316,8 +305,8 @@ public class CustomerDAO {
             return true;
 
         } catch (SQLException e) {
-            System.err.println("Failed to update customer in SQLite.");
-            e.printStackTrace();
+            LOGGER.error(
+                    "Failed to update customer in SQLite.", e);
             return false;
         }
     }
@@ -334,7 +323,8 @@ public class CustomerDAO {
                 """;
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
+             PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
 
             statement.setInt(1, customerId);
 
@@ -349,8 +339,8 @@ public class CustomerDAO {
             return true;
 
         } catch (SQLException e) {
-            System.err.println("Failed to delete customer from SQLite.");
-            e.printStackTrace();
+            LOGGER.error(
+                    "Failed to delete customer from SQLite.", e);
             return false;
         }
     }
