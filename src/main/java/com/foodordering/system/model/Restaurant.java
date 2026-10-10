@@ -1,8 +1,9 @@
 package com.foodordering.system.model;
-
+import java.io.Serializable;
 import java.time.LocalTime;
 
-public class Restaurant {
+public class Restaurant implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private int restaurantId;
     private String name;

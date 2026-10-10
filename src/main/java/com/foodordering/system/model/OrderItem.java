@@ -1,6 +1,7 @@
 package com.foodordering.system.model;
-
-public class OrderItem {
+import java.io.Serializable;
+public class OrderItem implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private MenuItem menuItem;
     private int quantity;

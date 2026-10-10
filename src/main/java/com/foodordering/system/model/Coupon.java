@@ -1,8 +1,9 @@
 package com.foodordering.system.model;
-
+import java.io.Serializable;
 import java.time.LocalDate;
 
-public class Coupon {
+public class Coupon implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private String couponCode;
     private String description;
