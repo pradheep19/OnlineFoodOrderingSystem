@@ -1,3 +1,4 @@
+
 package com.foodordering.system.database;
 
 import java.sql.Connection;
@@ -8,7 +9,8 @@ import java.sql.Statement;
 
 public class DatabaseManager {
 
-    private static final String DATABASE_URL = "jdbc:sqlite:foodordering.db";
+    private static final String DATABASE_URL =
+            "jdbc:sqlite:foodordering.db";
 
     private DatabaseManager() {
         // Utility class
@@ -73,6 +75,8 @@ public class DatabaseManager {
                     coupon_code TEXT,
                     status TEXT,
                     order_date_time TEXT,
+                    payment_method TEXT,
+                    payment_status TEXT DEFAULT 'PENDING',
                     FOREIGN KEY (customer_id)
                         REFERENCES customers(customer_id),
                     FOREIGN KEY (restaurant_id)
@@ -98,35 +102,110 @@ public class DatabaseManager {
         try (Connection connection = getConnection();
              Statement statement = connection.createStatement()) {
 
-            // Create customers and restaurants first
+            // Create customers and restaurants first.
             statement.execute(createCustomersTable);
             statement.execute(createRestaurantsTable);
 
             /*
-             * The original menu_items table did not contain restaurant_id.
-             * Since the current menu_items table is empty, recreate only
-             * this table with the correct schema.
+             * Retain the existing menu migration behavior.
+             * The old menu_items table is dropped only when
+             * it lacks restaurant_id, as in the existing code.
              */
             if (menuItemsTableNeedsMigration(connection)) {
-
                 statement.execute("DROP TABLE IF EXISTS menu_items");
             }
 
-            // Create the corrected menu_items table
             statement.execute(createMenuItemsTable);
 
-            // Create orders and order_items
+            // Create the existing orders table if it does not exist.
             statement.execute(createOrdersTable);
+
+            /*
+             * Safely migrate existing databases.
+             * Never drop or recreate the orders table.
+             */
+            addColumnIfMissing(
+                    connection,
+                    "orders",
+                    "payment_method",
+                    "TEXT"
+            );
+
+            addColumnIfMissing(
+                    connection,
+                    "orders",
+                    "payment_status",
+                    "TEXT DEFAULT 'PENDING'"
+            );
+
+            // Create order items after the orders table is available.
             statement.execute(createOrderItemsTable);
 
-        } catch (SQLException e) {
+            System.out.println(
+                    "SQLite database initialized successfully."
+            );
 
+        } catch (SQLException e) {
             System.err.println(
                     "Database initialization failed."
             );
-
             e.printStackTrace();
         }
+    }
+
+    /*
+     * Adds a column only if it does not already exist.
+     * This allows the application to start with both old
+     * and newly created databases.
+     */
+    private static void addColumnIfMissing(
+            Connection connection,
+            String tableName,
+            String columnName,
+            String columnDefinition) throws SQLException {
+
+        if (!columnExists(connection, tableName, columnName)) {
+
+            String sql = "ALTER TABLE " + tableName
+                    + " ADD COLUMN " + columnName
+                    + " " + columnDefinition;
+
+            try (Statement statement =
+                         connection.createStatement()) {
+                statement.execute(sql);
+            }
+
+            System.out.println(
+                    "Added column " + columnName
+                            + " to table " + tableName
+            );
+        }
+    }
+
+    /*
+     * Checks whether a column exists using SQLite table metadata.
+     */
+    private static boolean columnExists(
+            Connection connection,
+            String tableName,
+            String columnName) throws SQLException {
+
+        String sql = "PRAGMA table_info(" + tableName + ")";
+
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
+
+            while (resultSet.next()) {
+                String existingColumn =
+                        resultSet.getString("name");
+
+                if (columnName.equalsIgnoreCase(existingColumn)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /*
@@ -145,7 +224,6 @@ public class DatabaseManager {
              ResultSet resultSet = statement.executeQuery(sql)) {
 
             while (resultSet.next()) {
-
                 tableExists = true;
 
                 String columnName =
@@ -157,26 +235,17 @@ public class DatabaseManager {
             }
         }
 
-        /*
-         * No table yet:
-         * Nothing needs to be migrated.
-         */
+        // No table exists yet, so no migration is needed.
         if (!tableExists) {
             return false;
         }
 
-        /*
-         * Table already has restaurant_id:
-         * Keep it.
-         */
+        // The table already has the required column.
         if (hasRestaurantId) {
             return false;
         }
 
-        /*
-         * Existing old schema does not contain restaurant_id.
-         * At this stage of development the table should be empty.
-         */
+        // Preserve the original migration behavior for old menu schemas.
         return true;
     }
 }

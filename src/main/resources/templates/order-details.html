@@ -1,0 +1,296 @@
+
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodHub | Order Details</title>
+
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+
+    <style>
+        body {
+            background: #f6f7fb;
+            color: #172033;
+        }
+
+        .details-container {
+            max-width: 850px;
+            margin: 45px auto;
+            padding: 0 20px;
+        }
+
+        .page-heading {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .details-card {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 6px 22px rgba(0, 0, 0, 0.07);
+        }
+
+        .details-card h2 {
+            font-size: 19px;
+            margin: 0 0 18px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 12px 0;
+            border-bottom: 1px solid #eeeeee;
+        }
+
+        .detail-label {
+            color: #777;
+        }
+
+        .detail-value {
+            text-align: right;
+            font-weight: 600;
+            overflow-wrap: anywhere;
+        }
+
+        .paid {
+            color: #159447;
+        }
+
+        .pending {
+            color: #c87500;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 12px 0;
+            border-bottom: 1px solid #eeeeee;
+        }
+
+        .final-amount {
+            font-size: 22px;
+            font-weight: 700;
+            color: #ff563d;
+        }
+
+        .action-link {
+            display: inline-block;
+            padding: 11px 20px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            background: #ff563d;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .secondary-link {
+            background: #e9ebf2;
+            color: #222;
+        }
+
+        @media (max-width: 600px) {
+            .details-card {
+                padding: 18px;
+            }
+
+            .detail-row {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .detail-value {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<nav class="navbar">
+    <div class="logo">🍴 FoodHub</div>
+
+    <ul class="nav-links">
+        <li><a th:href="@{/}">Home</a></li>
+        <li><a th:href="@{/restaurants}">Restaurants</a></li>
+        <li><a th:href="@{/orders}">Order History</a></li>
+        <li><a th:href="@{/cart}">🛒 Cart</a></li>
+    </ul>
+</nav>
+
+<main class="details-container">
+
+    <header class="page-heading">
+        <h1>📦 Order Details</h1>
+        <p>
+            Order #
+            <strong th:text="${order.orderId}">15</strong>
+        </p>
+    </header>
+
+    <section class="details-card">
+        <h2>📋 Order Information</h2>
+
+        <div class="detail-row">
+            <span class="detail-label">Order ID</span>
+            <span class="detail-value"
+                  th:text="${order.orderId}">15</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="detail-label">Customer</span>
+            <span class="detail-value"
+                  th:text="${customer.name}">Yukesh</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="detail-label">Restaurant</span>
+            <span class="detail-value"
+                  th:text="${restaurant.name}">Spice Garden</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="detail-label">Order Date</span>
+            <span class="detail-value"
+                  th:text="${order.orderDateTime != null
+                    ? #temporals.format(order.orderDateTime,
+                        'dd MMM yyyy, hh:mm a')
+                    : 'Not available'}">
+                10 Oct 2026
+            </span>
+        </div>
+
+        <div class="detail-row">
+            <span class="detail-label">Order Status</span>
+            <span class="detail-value"
+                  th:text="${order.status}">CONFIRMED</span>
+        </div>
+    </section>
+
+    <section class="details-card">
+        <h2>💳 Payment Information</h2>
+
+        <div class="detail-row">
+            <span class="detail-label">Payment Method</span>
+            <span class="detail-value"
+                  th:text="${order.paymentMethod == null
+                    ? 'Not available'
+                    : (order.paymentMethod == 'COD'
+                        ? 'Cash on Delivery'
+                        : (order.paymentMethod == 'CARD'
+                            ? 'Credit / Debit Card'
+                            : order.paymentMethod))}">
+                UPI
+            </span>
+        </div>
+
+        <div class="detail-row">
+            <span class="detail-label">Payment Status</span>
+            <span class="detail-value"
+                  th:classappend="${order.paymentStatus == 'PAID'}
+                    ? ' paid' : ' pending'"
+                  th:text="${order.paymentStatus == null
+                    ? 'PENDING' : order.paymentStatus}">
+                PAID
+            </span>
+        </div>
+    </section>
+
+    <section class="details-card">
+        <h2>🍽️ Ordered Items</h2>
+
+        <div class="order-item" th:each="item : ${order.items}">
+            <div>
+                <strong th:text="${item.menuItem.name}">
+                    Chicken Biryani
+                </strong>
+                <div class="detail-label">
+                    Quantity:
+                    <span th:text="${item.quantity}">1</span>
+                </div>
+            </div>
+
+            <strong>
+                Rs.
+                <span th:text="${#numbers.formatDecimal(
+                    item.totalPrice, 1, 2
+                )}">319.00</span>
+            </strong>
+        </div>
+    </section>
+
+    <section class="details-card">
+        <h2>💰 Price Summary</h2>
+
+        <div class="detail-row">
+            <span class="detail-label">Subtotal</span>
+            <span class="detail-value">
+                Rs.
+                <span th:text="${#numbers.formatDecimal(
+                    order.subtotal, 1, 2
+                )}">319.00</span>
+            </span>
+        </div>
+
+        <div class="detail-row">
+            <span class="detail-label">Dynamic Pricing Adjustment</span>
+            <span class="detail-value">
+                Rs.
+                <span th:text="${#numbers.formatDecimal(
+                    order.dynamicPricingAmount, 1, 2
+                )}">99.00</span>
+            </span>
+        </div>
+
+        <div class="detail-row">
+            <span class="detail-label">Discount</span>
+            <span class="detail-value">
+                Rs.
+                <span th:text="${#numbers.formatDecimal(
+                    order.discountAmount, 1, 2
+                )}">47.85</span>
+            </span>
+        </div>
+
+        <div class="detail-row">
+            <span class="detail-label">Delivery Fee</span>
+            <span class="detail-value">
+                Rs.
+                <span th:text="${#numbers.formatDecimal(
+                    order.deliveryFee, 1, 2
+                )}">50.00</span>
+            </span>
+        </div>
+
+        <div class="detail-row">
+            <span>Final Amount</span>
+            <span class="final-amount">
+                Rs.
+                <span th:text="${#numbers.formatDecimal(
+                    order.finalAmount, 1, 2
+                )}">321.15</span>
+            </span>
+        </div>
+    </section>
+
+    <div style="text-align:center; margin-bottom:35px;">
+        <a th:href="@{/orders}" class="action-link secondary-link">
+            ← Back to Order History
+        </a>
+
+        <a th:href="@{/restaurants}" class="action-link">
+            Order More Food
+        </a>
+    </div>
+
+</main>
+
+</body>
+</html>

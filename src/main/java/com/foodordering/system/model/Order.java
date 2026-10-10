@@ -1,3 +1,4 @@
+
 package com.foodordering.system.model;
 
 import java.time.LocalDateTime;
@@ -21,6 +22,10 @@ public class Order {
     private OrderStatus status;
     private LocalDateTime orderDateTime;
 
+    // Payment details
+    private String paymentMethod;
+    private String paymentStatus;
+
     public Order(int orderId, Customer customer, Restaurant restaurant) {
         this.orderId = orderId;
         this.customer = customer;
@@ -28,6 +33,10 @@ public class Order {
         this.items = new ArrayList<>();
         this.status = OrderStatus.CREATED;
         this.orderDateTime = LocalDateTime.now();
+
+        // Payment details will be assigned during checkout.
+        this.paymentMethod = null;
+        this.paymentStatus = "PENDING";
     }
 
     public void addItem(OrderItem item) {
@@ -136,6 +145,24 @@ public class Order {
         this.orderDateTime = orderDateTime;
     }
 
+    // Payment method getter and setter
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    // Payment status getter and setter
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
     @Override
     public String toString() {
         return "Order{" +
@@ -149,6 +176,8 @@ public class Order {
                 ", deliveryFee=" + deliveryFee +
                 ", finalAmount=" + finalAmount +
                 ", status=" + status +
+                ", paymentMethod=" + paymentMethod +
+                ", paymentStatus=" + paymentStatus +
                 '}';
     }
 }

@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment | FoodHub</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .payment-wrapper {
+            max-width: 720px;
+            margin: 40px auto;
+            padding: 24px;
+        }
+
+        .payment-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 8px 30px rgba(0,0,0,.08);
+        }
+
+        .payment-option {
+            display: block;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 12px 0;
+            cursor: pointer;
+        }
+
+        .payment-option:has(input:checked) {
+            border-color: #16834a;
+            background: #f0fff5;
+        }
+
+        .payment-option input {
+            margin-right: 12px;
+        }
+
+        .amount {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 12px 0 24px;
+        }
+
+        .pay-button {
+            width: 100%;
+            border: 0;
+            border-radius: 10px;
+            padding: 14px;
+            margin-top: 16px;
+            background: #16834a;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .error-message {
+            color: #b42318;
+            margin-bottom: 16px;
+        }
+
+        .notice {
+            background: #fff8e6;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="payment-wrapper">
+    <div class="payment-card">
+
+        <h1>Complete Your Order</h1>
+        <p>Choose a payment method to continue.</p>
+
+        <div th:if="${error}" class="error-message" th:text="${error}"></div>
+
+        <h3>Amount to pay</h3>
+
+        <div class="amount">
+            Rs. <span th:text="${#numbers.formatDecimal(order.finalAmount, 1, 2)}">0.00</span>
+        </div>
+
+        <p>
+            <strong>Restaurant:</strong>
+            <span th:text="${order.restaurant.name}">Restaurant</span>
+        </p>
+
+        <p>
+            <strong>Order ID:</strong>
+            <span th:text="${order.orderId}">1</span>
+        </p>
+
+        <form th:action="@{/payment/confirm}" method="post">
+
+            <label class="payment-option">
+                <input type="radio" name="paymentMethod"
+                       value="UPI" required>
+                <strong>UPI</strong>
+                <br>
+                <small>Simulated UPI payment for demonstration.</small>
+            </label>
+
+            <label class="payment-option">
+                <input type="radio" name="paymentMethod"
+                       value="CARD" required>
+                <strong>Credit / Debit Card</strong>
+                <br>
+                <small>Simulated card payment for demonstration.</small>
+            </label>
+
+            <label class="payment-option">
+                <input type="radio" name="paymentMethod"
+                       value="COD" required>
+                <strong>Cash on Delivery</strong>
+                <br>
+                <small>Pay when your order arrives.</small>
+            </label>
+
+            <button type="submit" class="pay-button">
+                Confirm Payment Method
+            </button>
+        </form>
+
+        <div class="notice">
+            Demo only: UPI and card options simulate payment success.
+            No real payment is processed.
+        </div>
+
+        <p style="margin-top: 20px;">
+            <a th:href="@{/checkout}">Return to checkout</a>
+        </p>
+
+    </div>
+</div>
+
+</body>
+</html>

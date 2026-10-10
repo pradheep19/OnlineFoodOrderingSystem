@@ -1,0 +1,511 @@
+package com.foodordering.system.metrics;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class LCOMCalculator {
+
+    private static final String SOURCE_DIRECTORY =
+            "src/main/java";
+
+    private static final String EXCLUDED_PACKAGE =
+            "metrics";
+
+    /*
+     * Finds class/interface/enum declarations.
+     */
+    private static final Pattern CLASS_PATTERN =
+            Pattern.compile(
+                    "\\b(?:class|interface|enum)\\s+([A-Za-z_$][A-Za-z0-9_$]*)"
+            );
+
+    /*
+     * Finds instance field declarations.
+     *
+     * Examples:
+     * private int orderId;
+     * private Customer customer;
+     * private List<OrderItem> items;
+     */
+    private static final Pattern FIELD_PATTERN =
+            Pattern.compile(
+                    "(?m)^\\s*" +
+                    "(?:private|protected|public)\\s+" +
+                    "(?!static\\b)" +
+                    "(?:final\\s+)?" +
+                    "[\\w<>?,\\[\\]]+\\s+" +
+                    "([A-Za-z_$][A-Za-z0-9_$]*)\\s*(?:=|;)"
+            );
+
+    /*
+     * Finds method declarations.
+     */
+    private static final Pattern METHOD_PATTERN =
+            Pattern.compile(
+                    "(?m)^\\s*" +
+                    "(?:public|protected|private|static|final|synchronized|native|abstract|\\s)+" +
+                    "(?:[\\w<>?,\\[\\]]+\\s+)?" +
+                    "([A-Za-z_$][A-Za-z0-9_$]*)\\s*" +
+                    "\\([^;{}]*\\)\\s*(?:throws[^\\{]+)?\\{"
+            );
+
+    public static void main(String[] args) {
+
+        Path sourcePath = Paths.get(SOURCE_DIRECTORY);
+
+        try {
+
+            // =========================================================
+            // STEP 1: Find application Java files
+            // =========================================================
+
+            List<Path> javaFiles;
+
+            try (Stream<Path> paths = Files.walk(sourcePath)) {
+
+                javaFiles = paths
+                        .filter(Files::isRegularFile)
+                        .filter(path ->
+                                path.toString().endsWith(".java"))
+                        .filter(path ->
+                                !path.toString()
+                                        .contains(
+                                                java.io.File.separator
+                                                        + EXCLUDED_PACKAGE
+                                                        + java.io.File.separator
+                                        ))
+                        .collect(Collectors.toList());
+            }
+
+            if (javaFiles.isEmpty()) {
+
+                System.out.println(
+                        "No Java source files found."
+                );
+
+                return;
+            }
+
+            // =========================================================
+            // STEP 2: Analyze every application class
+            // =========================================================
+
+            Map<String, Integer> lcomResults =
+                    new TreeMap<>();
+
+            for (Path file : javaFiles) {
+
+                String source =
+                        Files.readString(file);
+
+                Matcher classMatcher =
+                        CLASS_PATTERN.matcher(source);
+
+                if (!classMatcher.find()) {
+                    continue;
+                }
+
+                String className =
+                        classMatcher.group(1);
+
+                int lcom =
+                        calculateLCOM4(source);
+
+                lcomResults.put(
+                        className,
+                        lcom
+                );
+            }
+
+            // =========================================================
+            // STEP 3: Display results
+            // =========================================================
+
+            System.out.println();
+            System.out.println(
+                    "=============================================================="
+            );
+
+            System.out.println(
+                    "       LCOM - LACK OF COHESION IN METHODS"
+            );
+
+            System.out.println(
+                    "=============================================================="
+            );
+
+            System.out.printf(
+                    "%-35s %s%n",
+                    "Class",
+                    "LCOM4"
+            );
+
+            System.out.println(
+                    "--------------------------------------------------------------"
+            );
+
+            int totalLCOM = 0;
+
+            for (Map.Entry<String, Integer> entry :
+                    lcomResults.entrySet()) {
+
+                System.out.printf(
+                        "%-35s %d%n",
+                        entry.getKey(),
+                        entry.getValue()
+                );
+
+                totalLCOM += entry.getValue();
+            }
+
+            // =========================================================
+            // STEP 4: Average LCOM
+            // =========================================================
+
+            int totalClasses =
+                    lcomResults.size();
+
+            double averageLCOM =
+                    totalClasses == 0
+                            ? 0
+                            : (double) totalLCOM
+                            / totalClasses;
+
+            System.out.println(
+                    "--------------------------------------------------------------"
+            );
+
+            System.out.println(
+                    "Total Classes : "
+                            + totalClasses
+            );
+
+            System.out.println(
+                    "Total LCOM    : "
+                            + totalLCOM
+            );
+
+            System.out.printf(
+                    "Average LCOM  : %.2f%n",
+                    averageLCOM
+            );
+
+            System.out.println(
+                    "=============================================================="
+            );
+
+        } catch (IOException e) {
+
+            System.err.println(
+                    "Error reading Java source files."
+            );
+
+            e.printStackTrace();
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------------
+     * LCOM4 CALCULATION
+     * ---------------------------------------------------------------
+     *
+     * Each method is treated as a node.
+     *
+     * Two methods are connected if they access at least one
+     * common instance field.
+     *
+     * Connected methods form one component.
+     *
+     * LCOM4 = number of connected components.
+     */
+    private static int calculateLCOM4(String source) {
+
+        // -------------------------------------------------------------
+        // Find instance fields
+        // -------------------------------------------------------------
+
+        Set<String> fields =
+                new HashSet<>();
+
+        Matcher fieldMatcher =
+                FIELD_PATTERN.matcher(source);
+
+        while (fieldMatcher.find()) {
+
+            fields.add(
+                    fieldMatcher.group(1)
+            );
+        }
+
+        /*
+         * If the class has no instance fields,
+         * there is no field-based cohesion to measure.
+         */
+        if (fields.isEmpty()) {
+            return 0;
+        }
+
+        // -------------------------------------------------------------
+        // Find methods and the fields they access
+        // -------------------------------------------------------------
+
+        Map<String, Set<String>> methodFields =
+                new LinkedHashMap<>();
+
+        Matcher methodMatcher =
+                METHOD_PATTERN.matcher(source);
+
+        while (methodMatcher.find()) {
+
+            String methodName =
+                    methodMatcher.group(1);
+
+            int methodStart =
+                    methodMatcher.end();
+
+            int methodEnd =
+                    findMethodEnd(
+                            source,
+                            methodStart
+                    );
+
+            if (methodEnd <= methodStart) {
+                continue;
+            }
+
+            String methodBody =
+                    source.substring(
+                            methodStart,
+                            methodEnd
+                    );
+
+            Set<String> accessedFields =
+                    new HashSet<>();
+
+            for (String field : fields) {
+
+                Pattern fieldReference =
+                        Pattern.compile(
+                                "\\b"
+                                        + Pattern.quote(field)
+                                        + "\\b"
+                        );
+
+                if (fieldReference
+                        .matcher(methodBody)
+                        .find()) {
+
+                    accessedFields.add(field);
+                }
+            }
+
+            /*
+             * Ignore methods that don't access
+             * any instance fields.
+             */
+            if (!accessedFields.isEmpty()) {
+
+                /*
+                 * Avoid duplicate method names caused by
+                 * unusual source patterns.
+                 */
+                String uniqueMethodName =
+                        methodName;
+
+                int counter = 2;
+
+                while (methodFields
+                        .containsKey(uniqueMethodName)) {
+
+                    uniqueMethodName =
+                            methodName
+                                    + "#" + counter++;
+
+                }
+
+                methodFields.put(
+                        uniqueMethodName,
+                        accessedFields
+                );
+            }
+        }
+
+        if (methodFields.isEmpty()) {
+            return 0;
+        }
+
+        // -------------------------------------------------------------
+        // Build method graph
+        // -------------------------------------------------------------
+
+        List<String> methods =
+                new ArrayList<>(
+                        methodFields.keySet()
+                );
+
+        Map<String, Set<String>> graph =
+                new HashMap<>();
+
+        for (String method : methods) {
+
+            graph.put(
+                    method,
+                    new HashSet<>()
+            );
+        }
+
+        /*
+         * Connect two methods when they access
+         * at least one common field.
+         */
+        for (int i = 0; i < methods.size(); i++) {
+
+            for (int j = i + 1;
+                 j < methods.size();
+                 j++) {
+
+                String methodA =
+                        methods.get(i);
+
+                String methodB =
+                        methods.get(j);
+
+                Set<String> fieldsA =
+                        methodFields.get(methodA);
+
+                Set<String> fieldsB =
+                        methodFields.get(methodB);
+
+                Set<String> commonFields =
+                        new HashSet<>(fieldsA);
+
+                commonFields.retainAll(fieldsB);
+
+                if (!commonFields.isEmpty()) {
+
+                    graph.get(methodA)
+                            .add(methodB);
+
+                    graph.get(methodB)
+                            .add(methodA);
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Count connected components
+        // -------------------------------------------------------------
+
+        Set<String> visited =
+                new HashSet<>();
+
+        int components = 0;
+
+        for (String method : methods) {
+
+            if (visited.contains(method)) {
+                continue;
+            }
+
+            components++;
+
+            explore(
+                    method,
+                    graph,
+                    visited
+            );
+        }
+
+        return components;
+    }
+
+    /*
+     * Finds the closing brace of a method body.
+     */
+    private static int findMethodEnd(
+            String source,
+            int start) {
+
+        int braceCount = 1;
+
+        boolean insideString = false;
+        boolean insideChar = false;
+
+        for (int i = start; i < source.length(); i++) {
+
+            char current =
+                    source.charAt(i);
+
+            char previous =
+                    i > 0
+                            ? source.charAt(i - 1)
+                            : '\0';
+
+            if (current == '"'
+                    && previous != '\\'
+                    && !insideChar) {
+
+                insideString =
+                        !insideString;
+            }
+
+            if (current == '\''
+                    && previous != '\\'
+                    && !insideString) {
+
+                insideChar =
+                        !insideChar;
+            }
+
+            if (insideString || insideChar) {
+                continue;
+            }
+
+            if (current == '{') {
+                braceCount++;
+            }
+
+            if (current == '}') {
+
+                braceCount--;
+
+                if (braceCount == 0) {
+                    return i;
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    /*
+     * Depth-first search used to find connected components.
+     */
+    private static void explore(
+            String method,
+            Map<String, Set<String>> graph,
+            Set<String> visited) {
+
+        visited.add(method);
+
+        for (String neighbour :
+                graph.get(method)) {
+
+            if (!visited.contains(neighbour)) {
+
+                explore(
+                        neighbour,
+                        graph,
+                        visited
+                );
+            }
+        }
+    }
+}

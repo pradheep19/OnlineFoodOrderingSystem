@@ -1,9 +1,9 @@
+
 package com.foodordering.system.controller;
 
 import com.foodordering.system.dao.CustomerDAO;
 import com.foodordering.system.dao.OrderDAO;
 import com.foodordering.system.dao.RestaurantDAO;
-
 import com.foodordering.system.model.Cart;
 import com.foodordering.system.model.Coupon;
 import com.foodordering.system.model.Customer;
@@ -14,7 +14,6 @@ import com.foodordering.system.model.Order;
 import com.foodordering.system.model.OrderItem;
 import com.foodordering.system.model.OrderStatus;
 import com.foodordering.system.model.Restaurant;
-
 import com.foodordering.system.service.DeliveryFeeCalculator;
 import com.foodordering.system.service.DiscountCalculator;
 import com.foodordering.system.service.LoyaltyService;
@@ -30,37 +29,29 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 
 @Controller
 public class CheckoutController {
 
+    private static final String PENDING_ORDER = "pendingPaymentOrder";
+    private static final String ORDER_BREAKDOWN = "pendingOrderBreakdown";
 
-    // =========================================================
-    // DAOs AND SERVICES
-    // =========================================================
+    private static final String CONFIRMED_ORDER = "confirmedOrder";
+    private static final String CONFIRMED_BREAKDOWN = "confirmedOrderBreakdown";
+    private static final String CONFIRMED_POINTS_EARNED =
+            "confirmedLoyaltyPointsEarned";
 
     private final CustomerDAO customerDAO;
-
     private final OrderDAO orderDAO;
-
     private final RestaurantDAO restaurantDAO;
-
     private final PricingEngine pricingEngine;
-
     private final DiscountCalculator discountCalculator;
-
     private final OrderValidator orderValidator;
-
     private final LoyaltyService loyaltyService;
-
     private final DeliveryFeeCalculator deliveryFeeCalculator;
-
-
-    // =========================================================
-    // CONSTRUCTOR
-    // =========================================================
 
     public CheckoutController(
             CustomerDAO customerDAO,
@@ -82,1058 +73,656 @@ public class CheckoutController {
         this.deliveryFeeCalculator = deliveryFeeCalculator;
     }
 
-
     // =========================================================
-    // GET LOGGED-IN CUSTOMER
+    // SESSION HELPERS
     // =========================================================
 
-    private Customer getLoggedInCustomer(
-            HttpSession session) {
-
-        return (Customer) session.getAttribute(
-                "loggedInCustomer"
-        );
+    private Customer getLoggedInCustomer(HttpSession session) {
+        return (Customer) session.getAttribute("loggedInCustomer");
     }
 
-
-    // =========================================================
-    // GET CART
-    // =========================================================
-
-    private Cart getCart(
-            HttpSession session) {
-
-        Cart cart =
-                (Cart) session.getAttribute("cart");
-
+    private Cart getCart(HttpSession session) {
+        Cart cart = (Cart) session.getAttribute("cart");
 
         if (cart != null) {
-
             return cart;
         }
 
-
-        Customer customer =
-                getLoggedInCustomer(session);
-
+        Customer customer = getLoggedInCustomer(session);
 
         if (customer == null) {
-
             return null;
         }
 
-
-        cart =
-                new Cart(
-                        1,
-                        customer
-                );
-
-
-        session.setAttribute(
-                "cart",
-                cart
-        );
-
+        cart = new Cart(1, customer);
+        session.setAttribute("cart", cart);
 
         return cart;
     }
 
-
-    // =========================================================
-    // GET RESTAURANT
-    // =========================================================
-
-    private Restaurant getRestaurant(
-            Cart cart) {
-
-        if (cart == null ||
-                cart.getItems() == null ||
-                cart.getItems().isEmpty()) {
-
+    private Restaurant getRestaurant(Cart cart) {
+        if (cart == null
+                || cart.getItems() == null
+                || cart.getItems().isEmpty()) {
             return null;
         }
 
+        int restaurantId = cart.getItems()
+                .get(0)
+                .getMenuItem()
+                .getRestaurantId();
 
-        int restaurantId =
-                cart.getItems()
-                        .get(0)
-                        .getMenuItem()
-                        .getRestaurantId();
-
-
-        return restaurantDAO.findById(
-                restaurantId
-        );
+        return restaurantDAO.findById(restaurantId);
     }
 
+    private String showCheckoutError(
+            Model model,
+            Customer customer,
+            Cart cart,
+            Restaurant restaurant,
+            String error) {
+
+        model.addAttribute("error", error);
+        model.addAttribute("customer", customer);
+        model.addAttribute("cart", cart);
+        model.addAttribute("restaurant", restaurant);
+
+        if (cart != null && cart.getItems() != null) {
+            model.addAttribute("subtotal", cart.getSubtotal());
+        }
+
+        return "checkout";
+    }
 
     // =========================================================
     // ORDER HISTORY
     // =========================================================
 
     @GetMapping("/orders")
-    public String orderHistory(
-            HttpSession session,
-            Model model) {
+    public String orderHistory(HttpSession session, Model model) {
 
-        Customer customer =
-                getLoggedInCustomer(session);
+        Customer customer = getLoggedInCustomer(session);
 
         if (customer == null) {
             return "redirect:/login";
         }
 
-        List<Order> customerOrders =
-                orderDAO.findAll()
-                        .stream()
-                        .filter(order ->
-                                order.getCustomer() != null
+        List<Order> customerOrders = orderDAO.findAll()
+                .stream()
+                .filter(order ->
+                        order.getCustomer() != null
                                 && order.getCustomer().getCustomerId()
-                                == customer.getCustomerId()
-                        )
-                        .sorted(
-                                (first, second) ->
-                                        second.getOrderDateTime()
-                                                .compareTo(
-                                                        first.getOrderDateTime()
-                                                )
-                        )
-                        .toList();
+                                == customer.getCustomerId())
+                .sorted((first, second) -> {
+                    if (first.getOrderDateTime() == null) {
+                        return 1;
+                    }
 
-        model.addAttribute(
-                "orders",
-                customerOrders
-        );
+                    if (second.getOrderDateTime() == null) {
+                        return -1;
+                    }
 
-        model.addAttribute(
-                "customer",
-                customer
-        );
+                    return second.getOrderDateTime()
+                            .compareTo(first.getOrderDateTime());
+                })
+                .toList();
+
+        model.addAttribute("orders", customerOrders);
+        model.addAttribute("customer", customer);
 
         return "order-history";
     }
-
 
     // =========================================================
     // CHECKOUT PAGE
     // =========================================================
 
     @GetMapping("/checkout")
-    public String checkout(
-            HttpSession session,
-            Model model) {
+    public String checkout(HttpSession session, Model model) {
 
-
-        Customer customer =
-                getLoggedInCustomer(session);
-
+        Customer customer = getLoggedInCustomer(session);
 
         if (customer == null) {
-
             return "redirect:/login";
         }
 
-
-        Cart cart =
-                getCart(session);
-
+        Cart cart = getCart(session);
 
         if (cart == null) {
-
             return "redirect:/login";
         }
 
+        Restaurant restaurant = getRestaurant(cart);
 
-        Restaurant restaurant =
-                getRestaurant(cart);
-
-
-        // =====================================================
-        // EMPTY CART
-        // =====================================================
-
-        if (cart.getItems() == null ||
-                cart.getItems().isEmpty()) {
-
-
-            model.addAttribute(
-                    "error",
+        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+            return showCheckoutError(
+                    model,
+                    customer,
+                    cart,
+                    restaurant,
                     "Your cart is empty. Please add items before checkout."
             );
-
-
-            model.addAttribute(
-                    "cart",
-                    cart
-            );
-
-
-            model.addAttribute(
-                    "customer",
-                    customer
-            );
-
-
-            model.addAttribute(
-                    "restaurant",
-                    restaurant
-            );
-
-
-            return "checkout";
         }
 
+        double deliveryFee = restaurant == null
+                ? 0.0
+                : deliveryFeeCalculator.calculateDeliveryFee(
+                        customer, restaurant
+                );
 
-        // =====================================================
-        // SUBTOTAL
-        // =====================================================
-
-        double subtotal =
-                cart.getSubtotal();
-
-
-        // =====================================================
-        // DELIVERY
-        // =====================================================
-
-        double deliveryFee =
-                0.0;
-
-
-        if (restaurant != null) {
-
-            deliveryFee =
-                    deliveryFeeCalculator.calculateDeliveryFee(
-                            customer,
-                            restaurant
-                    );
-        }
-
-
-        model.addAttribute(
-                "cart",
-                cart
-        );
-
-
-        model.addAttribute(
-                "customer",
-                customer
-        );
-
-
-        model.addAttribute(
-                "restaurant",
-                restaurant
-        );
-
-
-        model.addAttribute(
-                "subtotal",
-                subtotal
-        );
-
-
-        model.addAttribute(
-                "deliveryFee",
-                deliveryFee
-        );
-
+        model.addAttribute("customer", customer);
+        model.addAttribute("cart", cart);
+        model.addAttribute("restaurant", restaurant);
+        model.addAttribute("subtotal", cart.getSubtotal());
+        model.addAttribute("deliveryFee", deliveryFee);
 
         return "checkout";
     }
 
-
     // =========================================================
-    // PLACE ORDER
+    // PREPARE ORDER AND CALCULATE TOTAL
+    // The order is NOT saved here.
     // =========================================================
 
     @PostMapping("/checkout/place-order")
     public String placeOrder(
-            @RequestParam(required = false)
-            String couponCode,
-
+            @RequestParam(required = false) String couponCode,
             HttpSession session,
-
             Model model) {
 
-
-        // =====================================================
-        // CHECK LOGIN
-        // =====================================================
-
-        Customer customer =
-                getLoggedInCustomer(session);
-
+        Customer customer = getLoggedInCustomer(session);
 
         if (customer == null) {
-
             return "redirect:/login";
         }
 
-
-        // =====================================================
-        // GET CART
-        // =====================================================
-
-        Cart cart =
-                getCart(session);
-
+        Cart cart = getCart(session);
 
         if (cart == null) {
-
             return "redirect:/login";
         }
 
+        Restaurant restaurant = getRestaurant(cart);
 
-        Restaurant restaurant =
-                getRestaurant(cart);
-
-
-        // =====================================================
-        // EMPTY CART
-        // =====================================================
-
-        if (cart.getItems() == null ||
-                cart.getItems().isEmpty()) {
-
-
-            model.addAttribute(
-                    "error",
+        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+            return showCheckoutError(
+                    model,
+                    customer,
+                    cart,
+                    restaurant,
                     "Your cart is empty. Please add items before checkout."
             );
-
-
-            model.addAttribute(
-                    "cart",
-                    cart
-            );
-
-
-            model.addAttribute(
-                    "customer",
-                    customer
-            );
-
-
-            model.addAttribute(
-                    "restaurant",
-                    restaurant
-            );
-
-
-            return "checkout";
         }
-
-
-        // =====================================================
-        // RESTAURANT CHECK
-        // =====================================================
 
         if (restaurant == null) {
-
-
-            model.addAttribute(
-                    "error",
+            return showCheckoutError(
+                    model,
+                    customer,
+                    cart,
+                    null,
                     "Restaurant information could not be found."
             );
-
-
-            model.addAttribute(
-                    "cart",
-                    cart
-            );
-
-
-            model.addAttribute(
-                    "customer",
-                    customer
-            );
-
-
-            return "checkout";
         }
 
+        // Clear previous pending and confirmation data before a new order.
+        session.removeAttribute(PENDING_ORDER);
+        session.removeAttribute(ORDER_BREAKDOWN);
+        session.removeAttribute(CONFIRMED_ORDER);
+        session.removeAttribute(CONFIRMED_BREAKDOWN);
+        session.removeAttribute(CONFIRMED_POINTS_EARNED);
 
-        // =====================================================
-        // LOYALTY INFORMATION BEFORE ORDER
-        // =====================================================
-
-        LoyaltyTier loyaltyTierBeforeOrder =
-                customer.getLoyaltyTier();
-
-
-        double loyaltyPointsBeforeOrder =
-                customer.getLoyaltyPoints();
-
+        LoyaltyTier loyaltyTierBeforeOrder = customer.getLoyaltyTier();
+        double loyaltyPointsBeforeOrder = customer.getLoyaltyPoints();
 
         double loyaltyDiscountPercentage =
-                loyaltyService.getLoyaltyDiscountPercentage(
-                        customer
-                );
+                loyaltyService.getLoyaltyDiscountPercentage(customer);
 
+        int orderId = orderDAO.getOrderCount() + 1;
 
-        // =====================================================
-        // CREATE ORDER
-        // =====================================================
+        Order order = new Order(orderId, customer, restaurant);
 
-        int orderId =
-                orderDAO.getOrderCount() + 1;
-
-
-        Order order =
-                new Order(
-                        orderId,
-                        customer,
-                        restaurant
-                );
-
-
-        // =====================================================
-        // COPY CART ITEMS
-        // =====================================================
-
-        for (OrderItem cartItem :
-                cart.getItems()) {
-
-
-            order.getItems().add(
-                    cartItem
-            );
+        for (OrderItem cartItem : cart.getItems()) {
+            order.getItems().add(cartItem);
         }
 
-
-        // =====================================================
-        // VALIDATE ORDER
-        // =====================================================
-
-        LocalDateTime orderTime =
-                LocalDateTime.now();
-
+        LocalDateTime orderTime = LocalDateTime.now();
 
         String validationError =
-        orderValidator.getValidationError(
-                order,
-                orderTime
-        );
+                orderValidator.getValidationError(order, orderTime);
 
-if (validationError != null) {
-
-    model.addAttribute(
-            "error",
-            validationError
-    );
-
-    model.addAttribute(
-            "cart",
-            cart
-    );
-
-    model.addAttribute(
-            "customer",
-            customer
-    );
-
-    model.addAttribute(
-            "restaurant",
-            restaurant
-    );
-
-    return "checkout";
-}
-
-
-        // =====================================================
-        // DYNAMIC PRICING
-        // =====================================================
-
-        DemandLevel demandLevel =
-                DemandLevel.HIGH;
-
-
-        double originalSubtotal =
-                0.0;
-
-
-        double dynamicSubtotal =
-                0.0;
-
-
-        for (OrderItem item :
-                order.getItems()) {
-
-
-            MenuItem menuItem =
-                    item.getMenuItem();
-
-
-            double originalPrice =
-                    menuItem.getBasePrice();
-
-
-            double dynamicPrice =
-                    pricingEngine.calculateDynamicPrice(
-                            menuItem,
-                            orderTime,
-                            demandLevel
-                    );
-
-
-            item.setItemPrice(
-                    dynamicPrice
+        if (validationError != null) {
+            return showCheckoutError(
+                    model, customer, cart, restaurant, validationError
             );
-
-
-            originalSubtotal +=
-                    originalPrice *
-                            item.getQuantity();
-
-
-            dynamicSubtotal +=
-                    dynamicPrice *
-                            item.getQuantity();
         }
 
+        // -----------------------------------------------------
+        // DYNAMIC PRICING
+        // -----------------------------------------------------
 
-        // =====================================================
-        // DYNAMIC PRICING AMOUNT
-        // =====================================================
+        DemandLevel demandLevel = DemandLevel.HIGH;
+
+        double originalSubtotal = 0.0;
+        double dynamicSubtotal = 0.0;
+
+        for (OrderItem item : order.getItems()) {
+
+            MenuItem menuItem = item.getMenuItem();
+
+            double originalPrice = menuItem.getBasePrice();
+
+            double dynamicPrice = pricingEngine.calculateDynamicPrice(
+                    menuItem, orderTime, demandLevel
+            );
+
+            item.setItemPrice(dynamicPrice);
+
+            originalSubtotal += originalPrice * item.getQuantity();
+            dynamicSubtotal += dynamicPrice * item.getQuantity();
+        }
 
         double dynamicPricingAmount =
-                dynamicSubtotal -
-                        originalSubtotal;
+                dynamicSubtotal - originalSubtotal;
 
+        order.setSubtotal(dynamicSubtotal);
+        order.setDynamicPricingAmount(dynamicPricingAmount);
 
-        order.setSubtotal(
-                dynamicSubtotal
-        );
+        // -----------------------------------------------------
+        // COUPON VALIDATION
+        // -----------------------------------------------------
 
+        Coupon appliedCoupon = null;
 
-        order.setDynamicPricingAmount(
-                dynamicPricingAmount
-        );
+        if (couponCode != null && !couponCode.trim().isEmpty()) {
 
-
-        // =====================================================
-        // COUPON
-        // =====================================================
-
-        Coupon appliedCoupon =
-                null;
-
-
-        if (couponCode != null &&
-                !couponCode.trim().isEmpty()) {
-
-
-            String code =
-                    couponCode
-                            .trim()
-                            .toUpperCase();
-
-
-            // =================================================
-            // SAVE10
-            // =================================================
+            String code = couponCode.trim().toUpperCase();
 
             if ("SAVE10".equals(code)) {
 
+                appliedCoupon = new Coupon(
+                        "SAVE10",
+                        "10% off up to Rs.100",
+                        10.0,
+                        100.0,
+                        300.0,
+                        null,
+                        true
+                );
 
-                appliedCoupon =
-                        new Coupon(
-                                "SAVE10",
-                                "10% off up to Rs.100",
-                                10.0,
-                                100.0,
-                                300.0,
-                                null,
-                                true
-                        );
-            }
+            } else if ("FOOD20".equals(code)) {
 
+                appliedCoupon = new Coupon(
+                        "FOOD20",
+                        "20% off up to Rs.150",
+                        20.0,
+                        150.0,
+                        500.0,
+                        null,
+                        true
+                );
 
-            // =================================================
-            // FOOD20
-            // =================================================
+            } else {
 
-            else if ("FOOD20".equals(code)) {
-
-
-                appliedCoupon =
-                        new Coupon(
-                                "FOOD20",
-                                "20% off up to Rs.150",
-                                20.0,
-                                150.0,
-                                500.0,
-                                null,
-                                true
-                        );
-            }
-
-
-            // =================================================
-            // INVALID COUPON
-            // =================================================
-
-            else {
-
-
-                model.addAttribute(
-                        "error",
+                return showCheckoutError(
+                        model,
+                        customer,
+                        cart,
+                        restaurant,
                         "Invalid coupon code."
                 );
-
-
-                model.addAttribute(
-                        "cart",
-                        cart
-                );
-
-
-                model.addAttribute(
-                        "customer",
-                        customer
-                );
-
-
-                model.addAttribute(
-                        "restaurant",
-                        restaurant
-                );
-
-
-                model.addAttribute(
-                        "subtotal",
-                        dynamicSubtotal
-                );
-
-
-                return "checkout";
             }
         }
 
+        order.setAppliedCoupon(appliedCoupon);
 
-        // =====================================================
-        // SET COUPON
-        // =====================================================
-
-        order.setAppliedCoupon(
-                appliedCoupon
-        );
-
-
-        // =====================================================
-        // CALCULATE INDIVIDUAL DISCOUNTS
-        // =====================================================
-
-        /*
-         * The discounts are calculated against the
-         * dynamically priced subtotal.
-         */
+        // -----------------------------------------------------
+        // DISCOUNTS
+        // -----------------------------------------------------
 
         double loyaltyDiscountAmount =
                 discountCalculator.calculateLoyaltyDiscount(
-                        customer,
-                        dynamicSubtotal
+                        customer, dynamicSubtotal
                 );
-
 
         double bulkDiscountAmount =
                 discountCalculator.calculateBulkDiscount(
-                        order.getTotalItemCount(),
-                        dynamicSubtotal
+                        order.getTotalItemCount(), dynamicSubtotal
                 );
-
 
         double couponDiscountAmount =
                 discountCalculator.calculateCouponDiscount(
-                        appliedCoupon,
-                        dynamicSubtotal
+                        appliedCoupon, dynamicSubtotal
                 );
-
-
-        // =====================================================
-        // RAW TOTAL DISCOUNT
-        // =====================================================
 
         double rawDiscountAmount =
                 loyaltyDiscountAmount
                         + bulkDiscountAmount
                         + couponDiscountAmount;
 
-
-        // =====================================================
-        // 30% MAXIMUM DISCOUNT CAP
-        // =====================================================
-
-        double maximumAllowedDiscount =
-                dynamicSubtotal * 0.30;
-
-
-        double discountAmount =
-                rawDiscountAmount;
-
+        double maximumAllowedDiscount = dynamicSubtotal * 0.30;
 
         boolean discountCapped =
-                false;
+                rawDiscountAmount > maximumAllowedDiscount;
 
-
-        if (discountAmount >
-                maximumAllowedDiscount) {
-
-
-            discountAmount =
-                    maximumAllowedDiscount;
-
-
-            discountCapped =
-                    true;
-        }
-
-
-        // Round final discount
-        discountAmount =
-                Math.round(
-                        discountAmount * 100.0
-                ) / 100.0;
-
-
-        // =====================================================
-        // SET DISCOUNT
-        // =====================================================
-
-        order.setDiscountAmount(
-                discountAmount
+        double discountAmount = Math.min(
+                rawDiscountAmount, maximumAllowedDiscount
         );
 
+        discountAmount = Math.round(discountAmount * 100.0) / 100.0;
 
-        // =====================================================
+        order.setDiscountAmount(discountAmount);
+
+        // -----------------------------------------------------
         // DELIVERY FEE
-        // =====================================================
+        // -----------------------------------------------------
 
         double deliveryFee =
                 deliveryFeeCalculator.calculateDeliveryFee(
-                        customer,
-                        restaurant
+                        customer, restaurant
                 );
-
 
         if (deliveryFee < 0) {
-
-
-            model.addAttribute(
-                    "error",
+            return showCheckoutError(
+                    model,
+                    customer,
+                    cart,
+                    restaurant,
                     "Delivery is not available for your location."
             );
-
-
-            model.addAttribute(
-                    "cart",
-                    cart
-            );
-
-
-            model.addAttribute(
-                    "customer",
-                    customer
-            );
-
-
-            model.addAttribute(
-                    "restaurant",
-                    restaurant
-            );
-
-
-            return "checkout";
         }
 
+        order.setDeliveryFee(deliveryFee);
 
-        order.setDeliveryFee(
-                deliveryFee
-        );
-
-
-        // =====================================================
-        // FINAL AMOUNT
-        // =====================================================
+        // -----------------------------------------------------
+        // FINAL TOTAL
+        // -----------------------------------------------------
 
         double finalAmount =
-                dynamicSubtotal
-                        - discountAmount
-                        + deliveryFee;
+                dynamicSubtotal - discountAmount + deliveryFee;
 
+        finalAmount = Math.max(0.0, finalAmount);
+        finalAmount = Math.round(finalAmount * 100.0) / 100.0;
 
-        if (finalAmount < 0) {
+        order.setFinalAmount(finalAmount);
+        order.setStatus(OrderStatus.CONFIRMED);
+        order.setOrderDateTime(orderTime);
+        order.setPaymentStatus("PENDING");
 
-            finalAmount =
-                    0.0;
+        // Keep the calculated order in the session until payment confirmation.
+        // The order is not saved and loyalty points are not awarded here.
+        session.setAttribute(PENDING_ORDER, order);
+
+        Map<String, Object> breakdown = new HashMap<>();
+
+        breakdown.put("originalSubtotal", originalSubtotal);
+        breakdown.put("dynamicSubtotal", dynamicSubtotal);
+        breakdown.put("dynamicPricingAmount", dynamicPricingAmount);
+        breakdown.put("deliveryFee", deliveryFee);
+        breakdown.put("finalAmount", finalAmount);
+        breakdown.put("loyaltyDiscountAmount", loyaltyDiscountAmount);
+        breakdown.put("bulkDiscountAmount", bulkDiscountAmount);
+        breakdown.put("couponDiscountAmount", couponDiscountAmount);
+        breakdown.put("rawDiscountAmount", rawDiscountAmount);
+        breakdown.put("maximumAllowedDiscount", maximumAllowedDiscount);
+        breakdown.put("discountAmount", discountAmount);
+        breakdown.put("discountCapped", discountCapped);
+        breakdown.put(
+                "couponCode",
+                appliedCoupon == null ? null : appliedCoupon.getCouponCode()
+        );
+        breakdown.put("loyaltyTierBeforeOrder", loyaltyTierBeforeOrder);
+        breakdown.put("loyaltyPointsBeforeOrder", loyaltyPointsBeforeOrder);
+        breakdown.put("loyaltyDiscountPercentage", loyaltyDiscountPercentage);
+
+        session.setAttribute(ORDER_BREAKDOWN, breakdown);
+
+        model.addAttribute("order", order);
+        model.addAttribute("customer", customer);
+        model.addAttribute("restaurant", restaurant);
+        model.addAttribute("breakdown", breakdown);
+
+        return "payment";
+    }
+
+    // =========================================================
+    // PAYMENT PAGE
+    // =========================================================
+
+    @GetMapping("/payment")
+    public String paymentPage(HttpSession session, Model model) {
+
+        Customer customer = getLoggedInCustomer(session);
+
+        if (customer == null) {
+            return "redirect:/login";
         }
 
+        Order order = (Order) session.getAttribute(PENDING_ORDER);
 
-        finalAmount =
-                Math.round(
-                        finalAmount * 100.0
-                ) / 100.0;
+        if (order == null) {
+            return "redirect:/checkout";
+        }
 
+        // Ensure that the pending order belongs to the logged-in customer.
+        if (order.getCustomer().getCustomerId()
+                != customer.getCustomerId()) {
 
-        order.setFinalAmount(
-                finalAmount
+            session.removeAttribute(PENDING_ORDER);
+            session.removeAttribute(ORDER_BREAKDOWN);
+
+            return "redirect:/checkout";
+        }
+
+        model.addAttribute("order", order);
+        model.addAttribute("customer", customer);
+        model.addAttribute(
+                "breakdown",
+                session.getAttribute(ORDER_BREAKDOWN)
         );
 
+        return "payment";
+    }
 
-        // =====================================================
-        // ORDER STATUS
-        // =====================================================
+    // =========================================================
+    // CONFIRM PAYMENT AND SAVE ORDER
+    // =========================================================
 
-        order.setStatus(
-                OrderStatus.CONFIRMED
-        );
+    @PostMapping("/payment/confirm")
+    public String confirmPayment(
+            @RequestParam String paymentMethod,
+            HttpSession session,
+            Model model) {
 
+        Customer customer = getLoggedInCustomer(session);
 
-        order.setOrderDateTime(
-                orderTime
-        );
+        if (customer == null) {
+            return "redirect:/login";
+        }
 
+        Order order = (Order) session.getAttribute(PENDING_ORDER);
 
-        // =====================================================
-        // SAVE ORDER
-        // =====================================================
+        @SuppressWarnings("unchecked")
+        Map<String, Object> breakdown =
+                (Map<String, Object>) session.getAttribute(ORDER_BREAKDOWN);
 
-        boolean saved =
-                orderDAO.saveOrder(
-                        order
-                );
+        if (order == null || breakdown == null) {
+            return "redirect:/checkout";
+        }
 
+        if (order.getCustomer().getCustomerId()
+                != customer.getCustomerId()) {
+
+            session.removeAttribute(PENDING_ORDER);
+            session.removeAttribute(ORDER_BREAKDOWN);
+
+            return "redirect:/checkout";
+        }
+
+        // Accept only the supported payment methods.
+        String method = paymentMethod == null
+                ? ""
+                : paymentMethod.trim().toUpperCase();
+
+        if (!List.of("UPI", "CARD", "COD").contains(method)) {
+            model.addAttribute(
+                    "error", "Please select a valid payment method."
+            );
+            model.addAttribute("order", order);
+            model.addAttribute("customer", customer);
+            model.addAttribute("breakdown", breakdown);
+
+            return "payment";
+        }
+
+        // Prevent reprocessing an order that has already been saved.
+        if (orderDAO.findById(order.getOrderId()) != null) {
+            session.removeAttribute(PENDING_ORDER);
+            session.removeAttribute(ORDER_BREAKDOWN);
+
+            return "redirect:/orders";
+        }
+
+        order.setPaymentMethod(method);
+        order.setPaymentStatus("COD".equals(method) ? "PENDING" : "PAID");
+
+        // UPI and card payments are simulated; no real payment is processed.
+        boolean saved = orderDAO.saveOrder(order);
 
         if (!saved) {
-
-
             model.addAttribute(
                     "error",
-                    "Unable to save the order. Please try again."
+                    "Unable to save your order. Please try again."
             );
+            model.addAttribute("order", order);
+            model.addAttribute("customer", customer);
+            model.addAttribute("breakdown", breakdown);
 
-
-            model.addAttribute(
-                    "cart",
-                    cart
-            );
-
-
-            model.addAttribute(
-                    "customer",
-                    customer
-            );
-
-
-            model.addAttribute(
-                    "restaurant",
-                    restaurant
-            );
-
-
-            return "checkout";
+            return "payment";
         }
 
-
-        // =====================================================
-        // LOYALTY POINTS
-        // =====================================================
+        // Award loyalty points only after the order has been saved.
+        double pointsBeforeOrder =
+                (double) breakdown.get("loyaltyPointsBeforeOrder");
 
         loyaltyService.processLoyaltyPoints(
-                customer,
-                finalAmount
+                customer, order.getFinalAmount()
         );
-
-
-        // =====================================================
-        // POINTS EARNED
-        // =====================================================
 
         double loyaltyPointsEarned =
-                customer.getLoyaltyPoints()
-                        - loyaltyPointsBeforeOrder;
+                customer.getLoyaltyPoints() - pointsBeforeOrder;
 
+        customerDAO.updateCustomer(customer);
 
-        // =====================================================
-        // UPDATE CUSTOMER
-        // =====================================================
+        // Clear the cart only after the order has been saved successfully.
+        Cart cart = getCart(session);
 
-        customerDAO.updateCustomer(
-                customer
-        );
+        if (cart != null) {
+            cart.clear();
+            session.setAttribute("cart", cart);
+        }
 
-
-        // =====================================================
-        // SEND ORDER DATA
-        // =====================================================
-
-        model.addAttribute(
-                "order",
-                order
-        );
-
-
-        model.addAttribute(
-                "customer",
-                customer
-        );
-
-
-        model.addAttribute(
-                "restaurant",
-                restaurant
-        );
-
-
-        // =====================================================
-        // PRICE BREAKDOWN
-        // =====================================================
-
-        model.addAttribute(
-                "originalSubtotal",
-                originalSubtotal
-        );
-
-
-        model.addAttribute(
-                "dynamicSubtotal",
-                dynamicSubtotal
-        );
-
-
-        model.addAttribute(
-                "dynamicPricingAmount",
-                dynamicPricingAmount
-        );
-
-
-        model.addAttribute(
-                "deliveryFee",
-                deliveryFee
-        );
-
-
-        model.addAttribute(
-                "finalAmount",
-                finalAmount
-        );
-
-
-        // =====================================================
-        // DISCOUNT BREAKDOWN
-        // =====================================================
-
-        model.addAttribute(
-                "loyaltyDiscountAmount",
-                loyaltyDiscountAmount
-        );
-
-
-        model.addAttribute(
-                "bulkDiscountAmount",
-                bulkDiscountAmount
-        );
-
-
-        model.addAttribute(
-                "couponDiscountAmount",
-                couponDiscountAmount
-        );
-
-
-        model.addAttribute(
-                "rawDiscountAmount",
-                rawDiscountAmount
-        );
-
-
-        model.addAttribute(
-                "maximumAllowedDiscount",
-                maximumAllowedDiscount
-        );
-
-
-        model.addAttribute(
-                "discountAmount",
-                discountAmount
-        );
-
-
-        model.addAttribute(
-                "discountCapped",
-                discountCapped
-        );
-
-
-        // =====================================================
-        // COUPON INFORMATION
-        // =====================================================
-
-        if (appliedCoupon != null) {
-
-    model.addAttribute(
-            "couponCode",
-            couponCode
-    );
-
-} else {
-
-    model.addAttribute(
-            "couponCode",
-            null
-    );
-}
-
-
-        // =====================================================
-        // LOYALTY INFORMATION
-        // =====================================================
-
-        model.addAttribute(
-                "loyaltyTierBeforeOrder",
-                loyaltyTierBeforeOrder
-        );
-
-
-        model.addAttribute(
-                "loyaltyPointsBeforeOrder",
-                loyaltyPointsBeforeOrder
-        );
-
-
-        model.addAttribute(
-                "loyaltyDiscountPercentage",
-                loyaltyDiscountPercentage
-        );
-
-
-        model.addAttribute(
-                "loyaltyPointsEarned",
-                loyaltyPointsEarned
-        );
-
-
-        // =====================================================
-        // CLEAR CART
-        // =====================================================
-
-        cart.clear();
-
-
+        // Store confirmation data for a separate GET request.
+        session.setAttribute(CONFIRMED_ORDER, order);
         session.setAttribute(
-                "cart",
-                cart
+                CONFIRMED_BREAKDOWN, new HashMap<>(breakdown)
+        );
+        session.setAttribute(
+                CONFIRMED_POINTS_EARNED, loyaltyPointsEarned
         );
 
+        // Remove the pending payment draft.
+        session.removeAttribute(PENDING_ORDER);
+        session.removeAttribute(ORDER_BREAKDOWN);
 
-        // =====================================================
-        // SHOW CONFIRMATION
-        // =====================================================
+        // Post/Redirect/Get prevents refresh from resubmitting payment.
+        return "redirect:/payment/confirmed";
+    }
+
+    // =========================================================
+    // REFRESH-SAFE ORDER CONFIRMATION
+    // =========================================================
+
+    @GetMapping("/payment/confirmed")
+    public String confirmedPayment(
+            HttpSession session,
+            Model model) {
+
+        Customer customer = getLoggedInCustomer(session);
+
+        if (customer == null) {
+            return "redirect:/login";
+        }
+
+        Order order =
+                (Order) session.getAttribute(CONFIRMED_ORDER);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> breakdown =
+                (Map<String, Object>) session.getAttribute(
+                        CONFIRMED_BREAKDOWN
+                );
+
+        Object pointsObject =
+                session.getAttribute(CONFIRMED_POINTS_EARNED);
+
+        // No confirmation exists in this session; do not create an order.
+        if (order == null
+                || breakdown == null
+                || pointsObject == null) {
+            return "redirect:/orders";
+        }
+
+        // Customers may view only their own order confirmation.
+        if (order.getCustomer() == null
+                || order.getCustomer().getCustomerId()
+                != customer.getCustomerId()) {
+            return "redirect:/orders";
+        }
+
+        model.addAttribute("order", order);
+        model.addAttribute("customer", customer);
+        model.addAttribute("restaurant", order.getRestaurant());
+
+        for (Map.Entry<String, Object> entry : breakdown.entrySet()) {
+            model.addAttribute(entry.getKey(), entry.getValue());
+        }
+
+        model.addAttribute("loyaltyPointsEarned", pointsObject);
 
         return "order-confirmation";
     }
+    
+@GetMapping("/orders/{orderId}")
+public String viewOrderDetails(
+        @org.springframework.web.bind.annotation.PathVariable int orderId,
+        HttpSession session,
+        Model model) {
+
+    Customer customer = getLoggedInCustomer(session);
+
+    if (customer == null) {
+        return "redirect:/login";
+    }
+
+    // Load the saved order from SQLite.
+    Order order = orderDAO.findById(orderId);
+
+    if (order == null) {
+        return "redirect:/orders";
+    }
+
+    // Customers can view only their own orders.
+    if (order.getCustomer() == null
+            || order.getCustomer().getCustomerId()
+            != customer.getCustomerId()) {
+        return "redirect:/orders";
+    }
+
+    model.addAttribute("order", order);
+    model.addAttribute("customer", customer);
+    model.addAttribute("restaurant", order.getRestaurant());
+
+    return "order-details";
+}
+
 }
