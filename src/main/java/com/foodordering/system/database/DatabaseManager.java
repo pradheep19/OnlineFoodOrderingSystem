@@ -166,13 +166,12 @@ public class DatabaseManager {
             String columnDefinition) throws SQLException {
 
         String safeTable = validateIdentifier(tableName);
-        String safeColumn = validateIdentifier(columnName);
+String safeColumn = validateIdentifier(columnName);
 
-        // Only permit definitions used by the existing migrations.
-        if (!"TEXT".equals(columnDefinition)
-                && !"TEXT DEFAULT 'PENDING'".equals(columnDefinition)) {
-            throw new SQLException("Invalid column definition.");
-        }
+if (!"TEXT".equals(columnDefinition)
+        && !"TEXT DEFAULT 'PENDING'".equals(columnDefinition)) {
+    throw new SQLException("Invalid column definition.");
+}
 
         if (!columnExists(connection, safeTable, safeColumn)) {
 
@@ -194,31 +193,30 @@ public class DatabaseManager {
     /*
      * Checks whether a column exists using SQLite metadata.
      */
-    private static boolean columnExists(
-            Connection connection,
-            String tableName,
-            String columnName) throws SQLException {
+    
+private static boolean columnExists(
+        Connection connection,
+        String tableName,
+        String columnName) throws SQLException {
 
-        String safeTable = validateIdentifier(tableName);
-        String safeColumn = validateIdentifier(columnName);
+    String safeTable = validateIdentifier(tableName);
+    String safeColumn = validateIdentifier(columnName);
 
-        String sql = "PRAGMA table_info(\"" + safeTable + "\")";
+    try (ResultSet columns =
+                 connection.getMetaData().getColumns(
+                         null, null, safeTable, null)) {
 
-        try (Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql)) {
+        while (columns.next()) {
+            String existingColumn = columns.getString("COLUMN_NAME");
 
-            while (resultSet.next()) {
-                String existingColumn =
-                        resultSet.getString("name");
-
-                if (safeColumn.equalsIgnoreCase(existingColumn)) {
-                    return true;
-                }
+            if (safeColumn.equalsIgnoreCase(existingColumn)) {
+                return true;
             }
         }
-
-        return false;
     }
+
+    return false;
+}
 
     /*
      * Checks whether menu_items exists and contains restaurant_id.
