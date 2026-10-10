@@ -7,6 +7,9 @@ import com.foodordering.system.model.MenuItem;
 import com.foodordering.system.model.Order;
 import com.foodordering.system.model.OrderItem;
 import com.foodordering.system.model.OrderStatus;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -22,6 +25,9 @@ import java.util.Map;
 
 @Repository
 public class OrderDAO {
+
+    private static final Logger logger =
+            LoggerFactory.getLogger(OrderDAO.class);
 
     private final Map<Integer, Order> orders = new HashMap<>();
 
@@ -50,9 +56,7 @@ public class OrderDAO {
         loadOrdersFromDatabase();
     }
 
-    // =========================================================
     // SAVE NEW ORDER
-    // =========================================================
 
     public boolean saveOrder(Order order) {
 
@@ -110,38 +114,34 @@ public class OrderDAO {
                 return true;
 
             } catch (SQLException e) {
-                connection.rollback();
-                System.err.println("Failed to save order. Transaction rolled back.");
-                e.printStackTrace();
+                rollbackTransaction(connection, e);
+                logger.error(
+                        "Failed to save order {}.",
+                        order.getOrderId(), e);
                 return false;
             }
 
         } catch (SQLException e) {
-            System.err.println("Database connection failed while saving order.");
-            e.printStackTrace();
+            logger.error(
+                    "Database connection failed while saving order {}.",
+                    order.getOrderId(), e);
             return false;
         }
     }
 
-    // =========================================================
     // FIND ORDER BY ID
-    // =========================================================
 
     public Order findById(int orderId) {
         return orders.get(orderId);
     }
 
-    // =========================================================
     // FIND ALL ORDERS
-    // =========================================================
 
     public List<Order> findAll() {
         return new ArrayList<>(orders.values());
     }
 
-    // =========================================================
     // UPDATE EXISTING ORDER
-    // =========================================================
 
     public boolean updateOrder(Order order) {
 
@@ -214,22 +214,22 @@ public class OrderDAO {
                 return true;
 
             } catch (SQLException e) {
-                connection.rollback();
-                System.err.println("Failed to update order. Transaction rolled back.");
-                e.printStackTrace();
+                rollbackTransaction(connection, e);
+                logger.error(
+                        "Failed to update order {}.",
+                        order.getOrderId(), e);
                 return false;
             }
 
         } catch (SQLException e) {
-            System.err.println("Database connection failed while updating order.");
-            e.printStackTrace();
+            logger.error(
+                    "Database connection failed while updating order {}.",
+                    order.getOrderId(), e);
             return false;
         }
     }
 
-    // =========================================================
     // DELETE ORDER
-    // =========================================================
 
     public boolean deleteOrder(int orderId) {
 
@@ -274,29 +274,43 @@ public class OrderDAO {
                 return true;
 
             } catch (SQLException e) {
-                connection.rollback();
-                System.err.println("Failed to delete order. Transaction rolled back.");
-                e.printStackTrace();
+                rollbackTransaction(connection, e);
+                logger.error("Failed to delete order {}.", orderId, e);
                 return false;
             }
 
         } catch (SQLException e) {
-            System.err.println("Database connection failed while deleting order.");
-            e.printStackTrace();
+            logger.error(
+                    "Database connection failed while deleting order {}.",
+                    orderId, e);
             return false;
         }
     }
 
-    // =========================================================
+    // ROLLBACK TRANSACTION
+
+    private void rollbackTransaction(
+            Connection connection,
+            SQLException originalException) {
+
+        try {
+            connection.rollback();
+        } catch (SQLException rollbackException) {
+            originalException.addSuppressed(rollbackException);
+            logger.error("Failed to roll back database transaction.",
+                    rollbackException);
+        }
+    }
+
     // GET ORDER COUNT
-    // =========================================================
 
     public int getOrderCount() {
 
         String sql = "SELECT COUNT(*) FROM orders";
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql);
+             PreparedStatement statement =
+                     connection.prepareStatement(sql);
              ResultSet resultSet = statement.executeQuery()) {
 
             if (resultSet.next()) {
@@ -304,16 +318,13 @@ public class OrderDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("Failed to retrieve order count.");
-            e.printStackTrace();
+            logger.error("Failed to retrieve order count.", e);
         }
 
         return 0;
     }
 
-    // =========================================================
     // LOAD ALL ORDERS FROM SQLITE
-    // =========================================================
 
     private void loadOrdersFromDatabase() {
 
@@ -337,7 +348,8 @@ public class OrderDAO {
                 """;
 
         try (Connection connection = DatabaseManager.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql);
+             PreparedStatement statement =
+                     connection.prepareStatement(sql);
              ResultSet resultSet = statement.executeQuery()) {
 
             orders.clear();
@@ -353,14 +365,11 @@ public class OrderDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("Failed to load orders from SQLite.");
-            e.printStackTrace();
+            logger.error("Failed to load orders from SQLite.", e);
         }
     }
 
-    // =========================================================
     // CREATE ORDER FROM DATABASE RECORD
-    // =========================================================
 
     private Order createOrderFromResultSet(
             ResultSet resultSet) throws SQLException {
@@ -373,10 +382,9 @@ public class OrderDAO {
         var restaurant = restaurantDAO.findById(restaurantId);
 
         if (customer == null || restaurant == null) {
-            System.err.println(
-                    "Skipping order " + orderId
-                            + " because its customer or restaurant was not found."
-            );
+            logger.warn(
+                    "Skipping order {} because its customer or restaurant was not found.",
+                    orderId);
             return null;
         }
 
@@ -411,14 +419,13 @@ public class OrderDAO {
                         : "PENDING"
         );
 
-        // The coupon code is stored in SQLite. The saved financial
-        // values above are sufficient to display a completed order.
+        // Saved financial values are retained for historical orders.
+        // The coupon code remains stored in SQLite.
+
         return order;
     }
 
-    // =========================================================
     // LOAD ORDER ITEMS
-    // =========================================================
 
     private void loadOrderItems(
             Connection connection,
@@ -435,7 +442,8 @@ public class OrderDAO {
                 ORDER BY order_item_id
                 """;
 
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+        try (PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
 
             statement.setInt(1, order.getOrderId());
 
@@ -445,29 +453,29 @@ public class OrderDAO {
 
                     int itemId = resultSet.getInt("item_id");
                     int quantity = resultSet.getInt("quantity");
-                    double savedItemPrice = resultSet.getDouble("item_price");
-                    double savedTotalPrice = resultSet.getDouble("total_price");
+                    double savedItemPrice =
+                            resultSet.getDouble("item_price");
+                    double savedTotalPrice =
+                            resultSet.getDouble("total_price");
 
                     MenuItem menuItem = menuDAO.findById(itemId);
 
                     if (menuItem == null) {
-                        System.err.println(
-                                "Skipping order item " + itemId
-                                        + " because the menu item was not found."
-                        );
+                        logger.warn(
+                                "Skipping order item {} because the menu item was not found.",
+                                itemId);
                         continue;
                     }
 
-                    OrderItem orderItem = new OrderItem(menuItem, quantity);
+                    OrderItem orderItem =
+                            new OrderItem(menuItem, quantity);
 
-                    /*
-                     * Restore the price saved when the order was placed.
-                     * This prevents the current menu base price from
-                     * replacing the historical order price.
-                     */
+                    // Restore the price saved when the order was placed.
                     if (quantity > 0) {
-                        if (Math.abs(savedTotalPrice
-                                - (savedItemPrice * quantity)) < 0.01) {
+                        if (Math.abs(
+                                savedTotalPrice -
+                                        (savedItemPrice * quantity)
+                        ) < 0.01) {
                             orderItem.setItemPrice(savedItemPrice);
                         } else {
                             orderItem.setItemPrice(
@@ -483,9 +491,7 @@ public class OrderDAO {
         }
     }
 
-    // =========================================================
     // SAVE ORDER ITEMS
-    // =========================================================
 
     private void saveOrderItems(
             PreparedStatement statement,
@@ -505,9 +511,7 @@ public class OrderDAO {
         statement.executeBatch();
     }
 
-    // =========================================================
     // SET INSERT VALUES
-    // =========================================================
 
     private void setOrderStatementValues(
             PreparedStatement statement,
@@ -548,9 +552,7 @@ public class OrderDAO {
         );
     }
 
-    // =========================================================
     // SET UPDATE VALUES
-    // =========================================================
 
     private void setUpdateOrderStatementValues(
             PreparedStatement statement,
@@ -592,9 +594,7 @@ public class OrderDAO {
         statement.setInt(13, order.getOrderId());
     }
 
-    // =========================================================
     // SET COUPON CODE
-    // =========================================================
 
     private void setCouponCode(
             PreparedStatement statement,
