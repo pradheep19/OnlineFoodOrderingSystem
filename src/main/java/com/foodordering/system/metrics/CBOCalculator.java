@@ -1,3 +1,4 @@
+
 package com.foodordering.system.metrics;
 
 import java.io.IOException;
@@ -9,8 +10,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class CBOCalculator {
+
+    private static final Logger LOGGER =
+            Logger.getLogger(CBOCalculator.class.getName());
 
     /*
      * Source directory of the actual application.
@@ -20,7 +26,6 @@ public class CBOCalculator {
 
     /*
      * Package containing metric-calculation utilities.
-     * This package must NOT be included in the CBO calculation.
      */
     private static final String EXCLUDED_PACKAGE =
             "metrics";
@@ -39,10 +44,7 @@ public class CBOCalculator {
 
         try {
 
-            // =========================================================
             // STEP 1: Find application Java source files
-            // =========================================================
-
             List<Path> javaFiles;
 
             try (Stream<Path> paths = Files.walk(sourcePath)) {
@@ -52,112 +54,69 @@ public class CBOCalculator {
                         .filter(path ->
                                 path.toString().endsWith(".java"))
                         .filter(path ->
-                                !path.toString()
-                                        .contains(
-                                                java.io.File.separator
-                                                        + EXCLUDED_PACKAGE
-                                                        + java.io.File.separator
-                                        ))
+                                !path.toString().contains(
+                                        java.io.File.separator
+                                                + EXCLUDED_PACKAGE
+                                                + java.io.File.separator))
                         .collect(Collectors.toList());
             }
 
             if (javaFiles.isEmpty()) {
-
-                System.out.println(
-                        "No Java source files found."
-                );
-
+                System.out.println("No Java source files found.");
                 return;
             }
 
-            // =========================================================
             // STEP 2: Find application classes
-            // =========================================================
-
-            Set<String> projectClasses =
-                    new TreeSet<>();
+            Set<String> projectClasses = new TreeSet<>();
 
             for (Path file : javaFiles) {
 
-                String source =
-                        Files.readString(file);
-
-                Matcher matcher =
-                        CLASS_PATTERN.matcher(source);
+                String source = Files.readString(file);
+                Matcher matcher = CLASS_PATTERN.matcher(source);
 
                 while (matcher.find()) {
-
-                    projectClasses.add(
-                            matcher.group(1)
-                    );
+                    projectClasses.add(matcher.group(1));
                 }
             }
 
-            // =========================================================
             // STEP 3: Calculate CBO
-            // =========================================================
-
-            Map<String, Set<String>> couplingMap =
-                    new TreeMap<>();
+            Map<String, Set<String>> couplingMap = new TreeMap<>();
 
             for (Path file : javaFiles) {
 
-                String source =
-                        Files.readString(file);
-
-                Matcher classMatcher =
-                        CLASS_PATTERN.matcher(source);
+                String source = Files.readString(file);
+                Matcher classMatcher = CLASS_PATTERN.matcher(source);
 
                 if (!classMatcher.find()) {
                     continue;
                 }
 
-                String currentClass =
-                        classMatcher.group(1);
+                String currentClass = classMatcher.group(1);
+                Set<String> coupledClasses = new TreeSet<>();
 
-                Set<String> coupledClasses =
-                        new TreeSet<>();
+                for (String projectClass : projectClasses) {
 
-                /*
-                 * Check references to other application classes.
-                 */
-                for (String projectClass :
-                        projectClasses) {
-
-                    // A class is not coupled to itself.
                     if (projectClass.equals(currentClass)) {
                         continue;
                     }
 
                     Pattern referencePattern =
                             Pattern.compile(
-                                    "\\b"
-                                            + Pattern.quote(
-                                                    projectClass)
-                                            + "\\b"
+                                    "\\b" + Pattern.quote(projectClass) + "\\b"
                             );
 
                     Matcher referenceMatcher =
                             referencePattern.matcher(source);
 
                     if (referenceMatcher.find()) {
-
-                        coupledClasses.add(
-                                projectClass
-                        );
+                        coupledClasses.add(projectClass);
                     }
                 }
 
-                couplingMap.put(
-                        currentClass,
-                        coupledClasses
-                );
+                couplingMap.put(currentClass, coupledClasses);
             }
 
-            // =========================================================
             // STEP 4: Display results
-            // =========================================================
-
             System.out.println();
             System.out.println(
                     "=============================================================="
@@ -185,24 +144,15 @@ public class CBOCalculator {
             for (Map.Entry<String, Set<String>> entry :
                     couplingMap.entrySet()) {
 
-                String className =
-                        entry.getKey();
-
-                Set<String> coupledClasses =
-                        entry.getValue();
-
-                int cbo =
-                        coupledClasses.size();
+                String className = entry.getKey();
+                Set<String> coupledClasses = entry.getValue();
+                int cbo = coupledClasses.size();
 
                 totalCBO += cbo;
 
-                String coupled =
-                        coupledClasses.isEmpty()
-                                ? "-"
-                                : String.join(
-                                        ", ",
-                                        coupledClasses
-                                );
+                String coupled = coupledClasses.isEmpty()
+                        ? "-"
+                        : String.join(", ", coupledClasses);
 
                 System.out.printf(
                         "%-30s %-5d %s%n",
@@ -212,32 +162,19 @@ public class CBOCalculator {
                 );
             }
 
-            // =========================================================
             // STEP 5: Calculate average CBO
-            // =========================================================
+            int totalClasses = couplingMap.size();
 
-            int totalClasses =
-                    couplingMap.size();
-
-            double averageCBO =
-                    totalClasses == 0
-                            ? 0
-                            : (double) totalCBO
-                            / totalClasses;
+            double averageCBO = totalClasses == 0
+                    ? 0
+                    : (double) totalCBO / totalClasses;
 
             System.out.println(
                     "--------------------------------------------------------------"
             );
 
-            System.out.println(
-                    "Total Classes : "
-                            + totalClasses
-            );
-
-            System.out.println(
-                    "Total CBO     : "
-                            + totalCBO
-            );
+            System.out.println("Total Classes : " + totalClasses);
+            System.out.println("Total CBO     : " + totalCBO);
 
             System.out.printf(
                     "Average CBO   : %.2f%n",
@@ -249,12 +186,11 @@ public class CBOCalculator {
             );
 
         } catch (IOException e) {
-
-            System.err.println(
-                    "Error reading Java source files."
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Error reading Java source files for CBO calculation.",
+                    e
             );
-
-            e.printStackTrace();
         }
     }
 }
