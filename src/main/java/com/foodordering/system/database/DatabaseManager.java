@@ -102,28 +102,20 @@ public class DatabaseManager {
         try (Connection connection = getConnection();
              Statement statement = connection.createStatement()) {
 
-            // Create customers and restaurants first.
             statement.execute(createCustomersTable);
             statement.execute(createRestaurantsTable);
 
-            /*
-             * Retain the existing menu migration behavior.
-             * The old menu_items table is dropped only when
-             * it lacks restaurant_id, as in the existing code.
-             */
+            // Preserve the existing menu migration behavior.
             if (menuItemsTableNeedsMigration(connection)) {
-                statement.execute("DROP TABLE IF EXISTS menu_items");
+                statement.execute(
+                        "DROP TABLE IF EXISTS menu_items");
             }
 
             statement.execute(createMenuItemsTable);
-
-            // Create the existing orders table if it does not exist.
             statement.execute(createOrdersTable);
 
-            /*
-             * Safely migrate existing databases.
-             * Never drop or recreate the orders table.
-             */
+            // Safely migrate existing databases.
+            // Never drop or recreate the orders table.
             addColumnIfMissing(
                     connection,
                     "orders",
@@ -138,25 +130,34 @@ public class DatabaseManager {
                     "TEXT DEFAULT 'PENDING'"
             );
 
-            // Create order items after the orders table is available.
             statement.execute(createOrderItemsTable);
 
             System.out.println(
-                    "SQLite database initialized successfully."
-            );
+                    "SQLite database initialized successfully.");
 
         } catch (SQLException e) {
             System.err.println(
-                    "Database initialization failed."
-            );
+                    "Database initialization failed.");
             e.printStackTrace();
         }
     }
 
     /*
+     * Accept only simple SQL identifiers.
+     */
+    private static String validateIdentifier(String identifier)
+            throws SQLException {
+
+        if (identifier == null ||
+                !identifier.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+            throw new SQLException("Invalid SQL identifier.");
+        }
+
+        return identifier;
+    }
+
+    /*
      * Adds a column only if it does not already exist.
-     * This allows the application to start with both old
-     * and newly created databases.
      */
     private static void addColumnIfMissing(
             Connection connection,
@@ -164,11 +165,20 @@ public class DatabaseManager {
             String columnName,
             String columnDefinition) throws SQLException {
 
-        if (!columnExists(connection, tableName, columnName)) {
+        String safeTable = validateIdentifier(tableName);
+        String safeColumn = validateIdentifier(columnName);
 
-            String sql = "ALTER TABLE " + tableName
-                    + " ADD COLUMN " + columnName
-                    + " " + columnDefinition;
+        // Only permit definitions used by the existing migrations.
+        if (!"TEXT".equals(columnDefinition)
+                && !"TEXT DEFAULT 'PENDING'".equals(columnDefinition)) {
+            throw new SQLException("Invalid column definition.");
+        }
+
+        if (!columnExists(connection, safeTable, safeColumn)) {
+
+            String sql = "ALTER TABLE \"" + safeTable
+                    + "\" ADD COLUMN \"" + safeColumn
+                    + "\" " + columnDefinition;
 
             try (Statement statement =
                          connection.createStatement()) {
@@ -176,21 +186,23 @@ public class DatabaseManager {
             }
 
             System.out.println(
-                    "Added column " + columnName
-                            + " to table " + tableName
-            );
+                    "Added column " + safeColumn
+                            + " to table " + safeTable);
         }
     }
 
     /*
-     * Checks whether a column exists using SQLite table metadata.
+     * Checks whether a column exists using SQLite metadata.
      */
     private static boolean columnExists(
             Connection connection,
             String tableName,
             String columnName) throws SQLException {
 
-        String sql = "PRAGMA table_info(" + tableName + ")";
+        String safeTable = validateIdentifier(tableName);
+        String safeColumn = validateIdentifier(columnName);
+
+        String sql = "PRAGMA table_info(\"" + safeTable + "\")";
 
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(sql)) {
@@ -199,7 +211,7 @@ public class DatabaseManager {
                 String existingColumn =
                         resultSet.getString("name");
 
-                if (columnName.equalsIgnoreCase(existingColumn)) {
+                if (safeColumn.equalsIgnoreCase(existingColumn)) {
                     return true;
                 }
             }
@@ -209,8 +221,7 @@ public class DatabaseManager {
     }
 
     /*
-     * Checks whether menu_items exists and whether it contains
-     * the restaurant_id column.
+     * Checks whether menu_items exists and contains restaurant_id.
      */
     private static boolean menuItemsTableNeedsMigration(
             Connection connection) throws SQLException {
@@ -235,17 +246,14 @@ public class DatabaseManager {
             }
         }
 
-        // No table exists yet, so no migration is needed.
         if (!tableExists) {
             return false;
         }
 
-        // The table already has the required column.
         if (hasRestaurantId) {
             return false;
         }
 
-        // Preserve the original migration behavior for old menu schemas.
         return true;
     }
 }
