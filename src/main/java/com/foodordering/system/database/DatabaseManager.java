@@ -2,6 +2,7 @@
 package com.foodordering.system.database;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -114,21 +115,9 @@ public class DatabaseManager {
             statement.execute(createMenuItemsTable);
             statement.execute(createOrdersTable);
 
-            // Safely migrate existing databases.
-            // Never drop or recreate the orders table.
-            addColumnIfMissing(
-                    connection,
-                    "orders",
-                    "payment_method",
-                    "TEXT"
-            );
-
-            addColumnIfMissing(
-                    connection,
-                    "orders",
-                    "payment_status",
-                    "TEXT DEFAULT 'PENDING'"
-            );
+            // Use fixed SQL for the supported payment migrations.
+            addPaymentMethodColumnIfMissing(connection);
+            addPaymentStatusColumnIfMissing(connection);
 
             statement.execute(createOrderItemsTable);
 
@@ -143,80 +132,71 @@ public class DatabaseManager {
     }
 
     /*
-     * Accept only simple SQL identifiers.
+     * Adds payment_method only if it does not exist.
      */
-    private static String validateIdentifier(String identifier)
-            throws SQLException {
+    private static void addPaymentMethodColumnIfMissing(
+            Connection connection) throws SQLException {
 
-        if (identifier == null ||
-                !identifier.matches("[A-Za-z_][A-Za-z0-9_]*")) {
-            throw new SQLException("Invalid SQL identifier.");
-        }
-
-        return identifier;
-    }
-
-    /*
-     * Adds a column only if it does not already exist.
-     */
-    private static void addColumnIfMissing(
-            Connection connection,
-            String tableName,
-            String columnName,
-            String columnDefinition) throws SQLException {
-
-        String safeTable = validateIdentifier(tableName);
-String safeColumn = validateIdentifier(columnName);
-
-if (!"TEXT".equals(columnDefinition)
-        && !"TEXT DEFAULT 'PENDING'".equals(columnDefinition)) {
-    throw new SQLException("Invalid column definition.");
-}
-
-        if (!columnExists(connection, safeTable, safeColumn)) {
-
-            String sql = "ALTER TABLE \"" + safeTable
-                    + "\" ADD COLUMN \"" + safeColumn
-                    + "\" " + columnDefinition;
+        if (!columnExists(
+                connection, "orders", "payment_method")) {
 
             try (Statement statement =
                          connection.createStatement()) {
-                statement.execute(sql);
+                statement.execute(
+                        "ALTER TABLE orders ADD COLUMN payment_method TEXT");
             }
 
             System.out.println(
-                    "Added column " + safeColumn
-                            + " to table " + safeTable);
+                    "Added column payment_method to table orders");
         }
     }
 
     /*
-     * Checks whether a column exists using SQLite metadata.
+     * Adds payment_status only if it does not exist.
      */
-    
-private static boolean columnExists(
-        Connection connection,
-        String tableName,
-        String columnName) throws SQLException {
+    private static void addPaymentStatusColumnIfMissing(
+            Connection connection) throws SQLException {
 
-    String safeTable = validateIdentifier(tableName);
-    String safeColumn = validateIdentifier(columnName);
+        if (!columnExists(
+                connection, "orders", "payment_status")) {
 
-    try (ResultSet columns =
-                 connection.getMetaData().getColumns(
-                         null, null, safeTable, null)) {
-
-        while (columns.next()) {
-            String existingColumn = columns.getString("COLUMN_NAME");
-
-            if (safeColumn.equalsIgnoreCase(existingColumn)) {
-                return true;
+            try (Statement statement =
+                         connection.createStatement()) {
+                statement.execute(
+                        "ALTER TABLE orders ADD COLUMN payment_status "
+                                + "TEXT DEFAULT 'PENDING'");
             }
+
+            System.out.println(
+                    "Added column payment_status to table orders");
         }
     }
 
-    return false;
-}
+    /*
+     * Checks whether a column exists using JDBC metadata.
+     */
+    private static boolean columnExists(
+            Connection connection,
+            String tableName,
+            String columnName) throws SQLException {
+
+        DatabaseMetaData metadata = connection.getMetaData();
+
+        try (ResultSet columns = metadata.getColumns(
+                null, null, tableName, null)) {
+
+            while (columns.next()) {
+                String existingColumn =
+                        columns.getString("COLUMN_NAME");
+
+                if (columnName.equalsIgnoreCase(existingColumn)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     /*
      * Checks whether menu_items exists and contains restaurant_id.
@@ -248,10 +228,6 @@ private static boolean columnExists(
             return false;
         }
 
-        if (hasRestaurantId) {
-            return false;
-        }
-
-        return true;
+        return !hasRestaurantId;
     }
 }
