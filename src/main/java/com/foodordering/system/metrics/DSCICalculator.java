@@ -1,11 +1,17 @@
+
 package com.foodordering.system.metrics;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DSCICalculator {
+
+    private static final Logger LOGGER =
+            Logger.getLogger(DSCICalculator.class.getName());
 
     private static final String DISCOUNT_CALCULATOR =
             "src/main/java/com/foodordering/system/service/DiscountCalculator.java";
@@ -13,21 +19,11 @@ public class DSCICalculator {
     public static void main(String[] args) {
 
         try {
-
-            // =========================================================
             // STEP 1: Read the actual DiscountCalculator source
-            // =========================================================
+            Path sourcePath = Paths.get(DISCOUNT_CALCULATOR);
+            String source = Files.readString(sourcePath);
 
-            Path sourcePath =
-                    Paths.get(DISCOUNT_CALCULATOR);
-
-            String source =
-                    Files.readString(sourcePath);
-
-            // =========================================================
             // STEP 2: Detect implemented discount types
-            // =========================================================
-
             boolean loyaltyImplemented =
                     source.contains("calculateLoyaltyDiscount");
 
@@ -51,27 +47,18 @@ public class DSCICalculator {
                 totalDiscountTypes++;
             }
 
-            // =========================================================
-            // STEP 3: Calculate different stacking scenarios
-            // =========================================================
-
+            // STEP 3: Display implemented discount types
             System.out.println();
             System.out.println(
                     "=============================================================="
             );
-
             System.out.println(
                     "       DSCI - DISCOUNT STACKING COMPLEXITY INDEX"
             );
-
             System.out.println(
                     "=============================================================="
             );
-
-            System.out.println(
-                    "Implemented Discount Types"
-            );
-
+            System.out.println("Implemented Discount Types");
             System.out.println(
                     "--------------------------------------------------------------"
             );
@@ -100,157 +87,76 @@ public class DSCICalculator {
             System.out.println(
                     "--------------------------------------------------------------"
             );
-
             System.out.println(
-                    "Total Discount Types : "
-                            + totalDiscountTypes
+                    "Total Discount Types : " + totalDiscountTypes
             );
-
             System.out.println();
 
             System.out.println(
                     "DSCI = Discounts Used Together / Total Implemented Discounts"
             );
-
             System.out.println(
                     "--------------------------------------------------------------"
             );
 
-            // =========================================================
             // Scenario 1: Coupon only
-            // =========================================================
-
-            int couponOnly = 0;
-
-            if (couponImplemented) {
-                couponOnly++;
-            }
-
-            double dsciCouponOnly =
-                    calculateDSCI(
-                            couponOnly,
-                            totalDiscountTypes
-                    );
+            int couponOnly = couponImplemented ? 1 : 0;
 
             printScenario(
                     "Coupon Only",
                     couponOnly,
-                    totalDiscountTypes,
-                    dsciCouponOnly
+                    totalDiscountTypes
             );
 
-            // =========================================================
             // Scenario 2: Loyalty only
-            // =========================================================
-
-            int loyaltyOnly = 0;
-
-            if (loyaltyImplemented) {
-                loyaltyOnly++;
-            }
-
-            double dsciLoyaltyOnly =
-                    calculateDSCI(
-                            loyaltyOnly,
-                            totalDiscountTypes
-                    );
+            int loyaltyOnly = loyaltyImplemented ? 1 : 0;
 
             printScenario(
                     "Loyalty Only",
                     loyaltyOnly,
-                    totalDiscountTypes,
-                    dsciLoyaltyOnly
+                    totalDiscountTypes
             );
 
-            // =========================================================
             // Scenario 3: Loyalty + Coupon
-            // =========================================================
-
-            int loyaltyCoupon = 0;
-
-            if (loyaltyImplemented) {
-                loyaltyCoupon++;
-            }
-
-            if (couponImplemented) {
-                loyaltyCoupon++;
-            }
-
-            double dsciLoyaltyCoupon =
-                    calculateDSCI(
-                            loyaltyCoupon,
-                            totalDiscountTypes
-                    );
+            int loyaltyCoupon =
+                    (loyaltyImplemented ? 1 : 0)
+                            + (couponImplemented ? 1 : 0);
 
             printScenario(
                     "Loyalty + Coupon",
                     loyaltyCoupon,
-                    totalDiscountTypes,
-                    dsciLoyaltyCoupon
+                    totalDiscountTypes
             );
 
-            // =========================================================
             // Scenario 4: Loyalty + Bulk
-            // =========================================================
-
-            int loyaltyBulk = 0;
-
-            if (loyaltyImplemented) {
-                loyaltyBulk++;
-            }
-
-            if (bulkImplemented) {
-                loyaltyBulk++;
-            }
-
-            double dsciLoyaltyBulk =
-                    calculateDSCI(
-                            loyaltyBulk,
-                            totalDiscountTypes
-                    );
+            int loyaltyBulk =
+                    (loyaltyImplemented ? 1 : 0)
+                            + (bulkImplemented ? 1 : 0);
 
             printScenario(
                     "Loyalty + Bulk",
                     loyaltyBulk,
-                    totalDiscountTypes,
-                    dsciLoyaltyBulk
+                    totalDiscountTypes
             );
 
-            // =========================================================
             // Scenario 5: Maximum stacking
-            // =========================================================
+            int maximumStacking =
+                    (loyaltyImplemented ? 1 : 0)
+                            + (bulkImplemented ? 1 : 0)
+                            + (couponImplemented ? 1 : 0);
 
-            int maximumStacking = 0;
-
-            if (loyaltyImplemented) {
-                maximumStacking++;
-            }
-
-            if (bulkImplemented) {
-                maximumStacking++;
-            }
-
-            if (couponImplemented) {
-                maximumStacking++;
-            }
-
-            double maximumDSCI =
-                    calculateDSCI(
-                            maximumStacking,
-                            totalDiscountTypes
-                    );
+            double maximumDSCI = calculateDSCI(
+                    maximumStacking,
+                    totalDiscountTypes
+            );
 
             printScenario(
                     "Loyalty + Bulk + Coupon",
                     maximumStacking,
-                    totalDiscountTypes,
-                    maximumDSCI
+                    totalDiscountTypes
             );
 
-            // =========================================================
             // Final result
-            // =========================================================
-
             System.out.println(
                     "--------------------------------------------------------------"
             );
@@ -265,22 +171,16 @@ public class DSCICalculator {
             );
 
         } catch (IOException e) {
-
-            System.err.println(
-                    "Unable to read DiscountCalculator.java"
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Unable to read DiscountCalculator.java",
+                    e
             );
-
-            e.printStackTrace();
         }
     }
 
     /*
-     * DSCI Formula:
-     *
-     * DSCI =
-     * Discounts Actually Used Together
-     * ---------------------------------
-     * Total Implemented Discounts
+     * DSCI = Active Discounts / Total Implemented Discounts
      */
     private static double calculateDSCI(
             int activeDiscounts,
@@ -290,8 +190,7 @@ public class DSCICalculator {
             return 0.0;
         }
 
-        return (double) activeDiscounts
-                / totalDiscounts;
+        return (double) activeDiscounts / totalDiscounts;
     }
 
     /*
@@ -300,8 +199,12 @@ public class DSCICalculator {
     private static void printScenario(
             String scenario,
             int activeDiscounts,
-            int totalDiscounts,
-            double dsci) {
+            int totalDiscounts) {
+
+        double dsci = calculateDSCI(
+                activeDiscounts,
+                totalDiscounts
+        );
 
         System.out.printf(
                 "%-30s %d / %d        %.2f%n",
