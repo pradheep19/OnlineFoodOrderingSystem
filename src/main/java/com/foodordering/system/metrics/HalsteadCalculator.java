@@ -316,13 +316,10 @@ public class HalsteadCalculator {
             );
 
         } catch (IOException e) {
-
-            System.err.println(
-                    "Error reading Java source files."
-            );
-
-            e.printStackTrace();
-        }
+    System.err.println(
+            "Error reading Java source files: " + e.getMessage()
+    );
+}
     }
 
     /*
