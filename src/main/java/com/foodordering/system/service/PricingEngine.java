@@ -63,13 +63,15 @@ public class PricingEngine {
                 && time.isBefore(PEAK_END);
     }
 
-    /**
-     * Checks whether the given day is Saturday or Sunday.
-     */
-    private boolean isWeekend(DayOfWeek day) {
-        return day == DayOfWeek.SATURDAY
-                || day == DayOfWeek.SUNDAY;
-    }
+    
+/**
+ * Checks whether the given day is Saturday or Sunday.
+ */
+private boolean isWeekend(DayOfWeek day) {
+    return DayOfWeek.SATURDAY.equals(day)
+            || DayOfWeek.SUNDAY.equals(day);
+}
+
 
     /**
      * Returns the surcharge percentage based on demand.
