@@ -413,186 +413,85 @@ public class HalsteadCalculator {
      * "string literals"
      * 'character literals'
      */
-    private static String removeCommentsAndStrings(
-            String source) {
+    private static String removeCommentsAndStrings(String source) {
+        StringBuilder result = new StringBuilder();
 
-        StringBuilder result =
-                new StringBuilder();
+        final int NORMAL = 0;
+        final int LINE_COMMENT = 1;
+        final int BLOCK_COMMENT = 2;
+        final int STRING = 3;
+        final int CHARACTER = 4;
 
-        boolean inLineComment = false;
-        boolean inBlockComment = false;
-        boolean inString = false;
-        boolean inChar = false;
+        int state = NORMAL;
 
-        for (int i = 0;
-             i < source.length();
-             i++) {
+        for (int i = 0; i < source.length(); i++) {
+            char current = source.charAt(i);
+            char next = i + 1 < source.length()
+                    ? source.charAt(i + 1)
+                    : '\0';
 
-            char current =
-                    source.charAt(i);
-
-            char next =
-                    i + 1 < source.length()
-                            ? source.charAt(i + 1)
-                            : '\0';
-
-            // ---------------------------------------------------------
-            // Line comment
-            // ---------------------------------------------------------
-
-            if (inLineComment) {
-
+            if (state == LINE_COMMENT) {
                 if (current == '\n') {
-
-                    inLineComment = false;
+                    state = NORMAL;
                     result.append('\n');
-
                 } else {
-
                     result.append(' ');
                 }
-
                 continue;
             }
 
-            // ---------------------------------------------------------
-            // Block comment
-            // ---------------------------------------------------------
-
-            if (inBlockComment) {
-
-                if (current == '*'
-                        && next == '/') {
-
-                    inBlockComment = false;
-
+            if (state == BLOCK_COMMENT) {
+                if (current == '*' && next == '/') {
+                    state = NORMAL;
                     result.append("  ");
-
                     i++;
-
                 } else {
-
-                    result.append(
-                            current == '\n'
-                                    ? '\n'
-                                    : ' '
-                    );
+                    result.append(current == '\n' ? '\n' : ' ');
                 }
-
                 continue;
             }
 
-            // ---------------------------------------------------------
-            // String literal
-            // ---------------------------------------------------------
+            // String and character literals share the same processing logic.
+            if (state == STRING || state == CHARACTER) {
+                char closingQuote = state == STRING ? '"' : '\'';
 
-            if (inString) {
-
-                if (current == '\\'
-                        && next != '\0') {
-
+                if (current == '\\' && next != '\0') {
                     result.append("  ");
-
                     i++;
-
-                } else if (current == '"') {
-
-                    inString = false;
+                } else if (current == closingQuote) {
+                    state = NORMAL;
                     result.append(' ');
-
                 } else {
-
-                    result.append(
-                            current == '\n'
-                                    ? '\n'
-                                    : ' '
-                    );
+                    result.append(current == '\n' ? '\n' : ' ');
                 }
-
                 continue;
             }
 
-            // ---------------------------------------------------------
-            // Character literal
-            // ---------------------------------------------------------
-
-            if (inChar) {
-
-                if (current == '\\'
-                        && next != '\0') {
-
-                    result.append("  ");
-
-                    i++;
-
-                } else if (current == '\'') {
-
-                    inChar = false;
-                    result.append(' ');
-
-                } else {
-
-                    result.append(
-                            current == '\n'
-                                    ? '\n'
-                                    : ' '
-                    );
-                }
-
-                continue;
-            }
-
-            // ---------------------------------------------------------
-            // Start comments
-            // ---------------------------------------------------------
-
-            if (current == '/'
-                    && next == '/') {
-
-                inLineComment = true;
-
+            // Detect the beginning of comments.
+            if (current == '/' && next == '/') {
+                state = LINE_COMMENT;
                 result.append("  ");
-
                 i++;
-
                 continue;
             }
 
-            if (current == '/'
-                    && next == '*') {
-
-                inBlockComment = true;
-
+            if (current == '/' && next == '*') {
+                state = BLOCK_COMMENT;
                 result.append("  ");
-
                 i++;
-
                 continue;
             }
 
-            // ---------------------------------------------------------
-            // Start string
-            // ---------------------------------------------------------
-
+            // Detect the beginning of string and character literals.
             if (current == '"') {
-
-                inString = true;
-
+                state = STRING;
                 result.append(' ');
-
                 continue;
             }
-
-            // ---------------------------------------------------------
-            // Start character literal
-            // ---------------------------------------------------------
 
             if (current == '\'') {
-
-                inChar = true;
-
+                state = CHARACTER;
                 result.append(' ');
-
                 continue;
             }
 
