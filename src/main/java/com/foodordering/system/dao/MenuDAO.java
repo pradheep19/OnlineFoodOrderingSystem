@@ -23,6 +23,23 @@ public class MenuDAO {
     private static final Logger logger =
             LoggerFactory.getLogger(MenuDAO.class);
 
+    private static final String INSERT_SQL = """
+            INSERT OR REPLACE INTO menu_items
+            (
+                item_id, restaurant_id, name, category,
+                base_price, available, dynamic_pricing_exempt,
+                available_from, available_to
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+
+    private static final String SELECT_SQL = """
+            SELECT item_id, restaurant_id, name, category,
+                   base_price, available, dynamic_pricing_exempt,
+                   available_from, available_to
+            FROM menu_items
+            """;
+
     private final Map<Integer, MenuItem> menuItems = new HashMap<>();
 
     public MenuDAO() {
@@ -33,50 +50,21 @@ public class MenuDAO {
     private void ensureSampleMenuData() {
         List<MenuItem> sampleItems = createSampleMenuItems();
 
-        String insertSql = """
-                INSERT OR IGNORE INTO menu_items
-                (
-                    item_id,
-                    restaurant_id,
-                    name,
-                    category,
-                    base_price,
-                    available,
-                    dynamic_pricing_exempt,
-                    available_from,
-                    available_to
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
+        String insertSql = INSERT_SQL.replace(
+                "INSERT OR REPLACE",
+                "INSERT OR IGNORE"
+        );
 
         try (Connection connection = DatabaseManager.getConnection();
              PreparedStatement statement =
                      connection.prepareStatement(insertSql)) {
 
             for (MenuItem item : sampleItems) {
-                statement.setInt(1, item.getItemId());
-                statement.setInt(2, item.getRestaurantId());
-                statement.setString(3, item.getName());
-                statement.setString(4, item.getCategory());
-                statement.setDouble(5, item.getBasePrice());
-                statement.setInt(6, item.isAvailable() ? 1 : 0);
-                statement.setInt(
-                        7,
-                        item.isDynamicPricingExempt() ? 1 : 0
-                );
-                statement.setString(
-                        8,
-                        item.getAvailableFrom().toString()
-                );
-                statement.setString(
-                        9,
-                        item.getAvailableTo().toString()
-                );
-
+                bindMenuItem(statement, item);
                 statement.executeUpdate();
             }
 
-            // Correct the restaurant association for Ice Cream.
+            // Preserve the existing Ice Cream restaurant association.
             String updateSql = """
                     UPDATE menu_items
                     SET restaurant_id = 3
@@ -89,8 +77,7 @@ public class MenuDAO {
             }
 
         } catch (SQLException e) {
-            logger.error(
-                    "Failed to initialize sample menu data.", e);
+            logger.error("Failed to initialize sample menu data.", e);
         }
     }
 
@@ -158,23 +145,9 @@ public class MenuDAO {
     }
 
     private void loadMenuItems() {
-        String sql = """
-                SELECT
-                    item_id,
-                    restaurant_id,
-                    name,
-                    category,
-                    base_price,
-                    available,
-                    dynamic_pricing_exempt,
-                    available_from,
-                    available_to
-                FROM menu_items
-                """;
-
         try (Connection connection = DatabaseManager.getConnection();
              PreparedStatement statement =
-                     connection.prepareStatement(sql);
+                     connection.prepareStatement(SELECT_SQL);
              ResultSet resultSet = statement.executeQuery()) {
 
             menuItems.clear();
@@ -200,9 +173,23 @@ public class MenuDAO {
             }
 
         } catch (SQLException e) {
-            logger.error(
-                    "Failed to load menu items from SQLite.", e);
+            logger.error("Failed to load menu items from SQLite.", e);
         }
+    }
+
+    private void bindMenuItem(
+            PreparedStatement statement,
+            MenuItem item) throws SQLException {
+
+        statement.setInt(1, item.getItemId());
+        statement.setInt(2, item.getRestaurantId());
+        statement.setString(3, item.getName());
+        statement.setString(4, item.getCategory());
+        statement.setDouble(5, item.getBasePrice());
+        statement.setInt(6, item.isAvailable() ? 1 : 0);
+        statement.setInt(7, item.isDynamicPricingExempt() ? 1 : 0);
+        statement.setString(8, item.getAvailableFrom().toString());
+        statement.setString(9, item.getAvailableTo().toString());
     }
 
     public MenuItem findById(int itemId) {
@@ -223,9 +210,7 @@ public class MenuDAO {
     public List<MenuItem> findByRestaurantId(int restaurantId) {
         return menuItems.values()
                 .stream()
-                .filter(item ->
-                        item.getRestaurantId() == restaurantId
-                )
+                .filter(item -> item.getRestaurantId() == restaurantId)
                 .toList();
     }
 
@@ -235,8 +220,7 @@ public class MenuDAO {
                 .stream()
                 .filter(item ->
                         item.getRestaurantId() == restaurantId
-                                && item.isAvailable()
-                )
+                                && item.isAvailable())
                 .toList();
     }
 
@@ -265,56 +249,20 @@ public class MenuDAO {
             menuItems.remove(itemId);
 
         } catch (SQLException e) {
-            logger.error(
-                    "Failed to delete menu item from SQLite.", e);
+            logger.error("Failed to delete menu item from SQLite.", e);
         }
     }
 
     private void saveToDatabase(MenuItem item) {
-        String sql = """
-                INSERT OR REPLACE INTO menu_items
-                (
-                    item_id,
-                    restaurant_id,
-                    name,
-                    category,
-                    base_price,
-                    available,
-                    dynamic_pricing_exempt,
-                    available_from,
-                    available_to
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
-
         try (Connection connection = DatabaseManager.getConnection();
              PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
+                     connection.prepareStatement(INSERT_SQL)) {
 
-            statement.setInt(1, item.getItemId());
-            statement.setInt(2, item.getRestaurantId());
-            statement.setString(3, item.getName());
-            statement.setString(4, item.getCategory());
-            statement.setDouble(5, item.getBasePrice());
-            statement.setInt(6, item.isAvailable() ? 1 : 0);
-            statement.setInt(
-                    7,
-                    item.isDynamicPricingExempt() ? 1 : 0
-            );
-            statement.setString(
-                    8,
-                    item.getAvailableFrom().toString()
-            );
-            statement.setString(
-                    9,
-                    item.getAvailableTo().toString()
-            );
-
+            bindMenuItem(statement, item);
             statement.executeUpdate();
 
         } catch (SQLException e) {
-            logger.error(
-                    "Failed to save menu item to SQLite.", e);
+            logger.error("Failed to save menu item to SQLite.", e);
         }
     }
 
